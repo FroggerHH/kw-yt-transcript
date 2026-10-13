@@ -47,6 +47,9 @@
 - [x] Gates: pytest 181, ruff clean; только README + test_readme
 - [x] ora-3 fix-list: CHANGELOG волны 4–5; completion ветка export; README exit-коды; валидация сегментов → skipped; atomic-хелпер; ARCH memory-limitation; cli docstring/EXAMPLES; SPEC пп.12–13 + acceptance; тест битых сегментов
 
+## Волна 10: CHANGELOG [x] (done, 181 passed, fix-3)
+- [x] Запись 0.2.0: волны 8–9 + review-циклы, счётчик 181; grep «Волна» = 9
+
 ## Волна 4: Экспорт + completion [x] (done 16:18, 163 passed, оркестратор напрямую)
 - [x] formats jsonl/csv (+реестр FORMATS, filenames, --format choices), тесты round-trip/quoting/empty/header
 - [x] contrib/kw-yt-completion.bash + README + тест покрытия; README «7 форматов», live «семью»

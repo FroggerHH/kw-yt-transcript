@@ -13,7 +13,7 @@
 - **Волна 3a — hardening по review:** тихий отсутствующий конфиг, сильный
   resume-комплект, search за O(n log n), `as_completed`-прогресс, общий
   `timefmt.py`, whisper-семафор (2), версии Python 3.11+ везде.
-- Тестов 176 (было 100 в v0.1), ruff `E/F/W/I/UP` чисто.
+- Тестов 181 (было 100 в v0.1), ruff `E/F/W/I/UP` чисто.
 - **Волна 4 — экспорт форматов + completion:** `jsonl` (строки для RAG)
   и `csv` (таблица) в `--format`/`FORMATS`, `contrib/kw-yt-completion.bash`.
 - **Волна 5 — сводный экспорт:** `kw-yt export` (один `corpus.jsonl/csv` +
@@ -22,6 +22,15 @@
   реплики, слова, минуты, `by_origin`/`by_lang`) без скачивания.
 - **Волна 7 — обложки:** `thumbnail.jpg` best-effort в папке видео + `<img>`
   в `report.html` (`thumbnail_file` в meta.json).
+- **Волна 8 — галерея в index.html:** миниатюры обложек (120px, lazy)
+  в ячейке названия, `thumbnail_file` в entries (`index.json` совместим,
+  is_file-защита от битого `<img>`).
+- **Волна 9 — аудит README против CLI:** все команды/флаги с корректными
+  дефолтами, 10 файлов в live-check, обложки в «Что умеет», конфиг-фолбэк.
+- **Review-циклы без блокеров:** ora-2 (конфиг-тишина, resume, search O(n));
+  ora-3 волн 4–5 (валидация сегментов → skipped, atomic, acceptance);
+  финал волн 6–7 (span/минуты в `export.summarize`, 7 форматов в ARCH/SPEC,
+  acceptance п.15, `thumbnail_file` в README).
 
 ## 0.1.0 (2026-10-13)
 
