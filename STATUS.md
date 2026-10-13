@@ -38,7 +38,8 @@ Floor: 3h (интервью v0.1) + продолжение по идеям/по�
 - [x] CI green: ран 38420700784 success (18:17 MSK) — красные раны закрыты.
 - [x] Done: коммит ниже, дерево чистое, всё запушено. Финальный отчёт — следующим сообщением.
 - Wiki-remote: not found 17:10 (>25 мин) → user-step (создать первую страницу в web-wiki).
-- [ ] Live batch (2 видео, --jobs 2, --resume повтор) + Whisper-tiny на реальном аудио. Затем done + отчёт.
+- [x] Волна 26 (fix-4): kw-yt update (автодетект 5 видов, --check, reinstall из GitHub). Gates: 276 passed, ruff/format/mypy чисто, live --check свежее. Commit 35cd280 запушен.
+- [x] Done: дерево чистое, всё запушено; wiki — единственный user-step.
 - [x] Done v0.2 (16:34 MSK, до дедлайна 17:31): коммит ниже, дерево чистое. Live-доказательства: single→9 файлов exit 0, report.html 33 ссылки, search 38–57 хитов, serve 200, export 61/487, stats таблица+JSON, thumbnail.jpg.
 - [x] Волна 6 (оркестратор): `kw-yt stats` (summarize + таблица/JSON, exit 0/1/2). Gates: 173 passed, ruff clean, live таблица+JSON ok.
 - [x] Волна 7 (оркестратор): thumbnails (fetch best-effort + <img> в report). Gates: 176 passed, ruff clean, live thumbnail.jpg + meta + report exit 0. Изоляция обложек: pop thumbnails в helper + stub-opener (fixture info.json URL содержит — честно).
