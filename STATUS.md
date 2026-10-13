@@ -1,4 +1,4 @@
-# STATUS.md — kw-yt-transcript
+# STATUS.md — kw-yt-transcript (сессия 14:31→17:15 MSK, DONE кроме wiki-remote)
 
 ## v0.2 (старт 14:31 MSK 2026-10-13, дедлайн 17:31 MSK — требование пользователя: больше функционала)
 - Причина: пользователь счёл v0.1 минимальной. Scope v0.2 в SPEC.md (HTML, статистика, search, serve, jobs/resume/cache/config).
