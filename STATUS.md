@@ -29,7 +29,8 @@
 - [x] Волна 18 (fix-3): CHANGELOG-финал (волны 1–17 + ASR + reviews, счётчик 191). Gates: 191 passed.
 - [x] Волна 19 (fix-3): библиотека-дефолт + library/clean + report-хаб (текст первым). Gates: 207 passed, ruff clean, live library exit 0.
 - [x] Волна 20 (fix-3): цветной вывод (TTY/NO_COLOR/--no-color, пайп чистый). Gates: 215 passed, ruff clean.
-- [ ] Волна 21 (fixer): фрагменты --from/--to. Затем live на видео пользователя, wiki, done + отчёт.
+- [x] Волна 21 (fix-3): фрагменты --from/--to (clip, суффикс, раздельный resume, пометка report). Gates: 224 passed, ruff clean.
+- [ ] Волна 22 (fixer): SKILL.md + completion-пробелы. Затем live на видео пользователя, wiki, done + отчёт.
 - Wiki-remote: not found 17:10 (>25 мин) → user-step (создать первую страницу в web-wiki).
 - [ ] Live batch (2 видео, --jobs 2, --resume повтор) + Whisper-tiny на реальном аудио. Затем done + отчёт.
 - [x] Done v0.2 (16:34 MSK, до дедлайна 17:31): коммит ниже, дерево чистое. Live-доказательства: single→9 файлов exit 0, report.html 33 ссылки, search 38–57 хитов, serve 200, export 61/487, stats таблица+JSON, thumbnail.jpg.

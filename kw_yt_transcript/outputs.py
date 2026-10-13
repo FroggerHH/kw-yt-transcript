@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from kw_yt_transcript import __version__
+from kw_yt_transcript import sections as sections_mod
 from kw_yt_transcript.formats import FORMATS
 from kw_yt_transcript.report import render_index, render_report
 from kw_yt_transcript.stats import compute_stats
@@ -73,10 +74,15 @@ def _is_complete(video_dir: Path) -> bool:
     )
 
 
-def find_ready(out_dir: str | Path, video_id: str | None) -> Path | None:
+def find_ready(
+    out_dir: str | Path, video_id: str | None, section_key: str | None = None
+) -> Path | None:
     """Найти готовую папку видео ``*_<video_id>`` (для --resume).
 
     Готовая = meta.json (со stats и origin) + transcript.json + report.html.
+    Полный прогон и фрагмент — разные слоты: без section_key папки
+    фрагментов (`_part` в имени; slug подчёркиваний не содержит) пропускаются,
+    с section_key ищется только точный суффикс `_<key>_<video_id>`.
 
     :return: путь к папке или None.
     """
@@ -87,7 +93,14 @@ def find_ready(out_dir: str | Path, video_id: str | None) -> Path | None:
         if not base.is_dir():
             return None
         for cand in sorted(base.glob(f"*_{video_id}")):
-            if cand.is_dir() and (cand / "meta.json").is_file() and _is_complete(cand):
+            if not (cand.is_dir() and (cand / "meta.json").is_file()):
+                continue
+            if section_key:
+                if not cand.name.endswith(f"_{section_key}_{video_id}"):
+                    continue
+            elif "_part" in cand.name:
+                continue
+            if _is_complete(cand):
                 return cand
     except Exception:
         return None
@@ -181,6 +194,7 @@ def write_video(
     transcript_lang: str | None = None,
     asr_model: str | None = None,
     thumb_opener=None,
+    section: tuple[float, float] | None = None,
 ) -> dict[str, str]:
     """Записать папку ``<slug>_<video_id>/``: meta.json + файлы транскрипта.
 
@@ -188,13 +202,18 @@ def write_video(
     tool_version и asr_model (только при origin 'whisper').
     Обложка thumbnail.jpg качается best-effort (неудача — тихо, без неё);
     имя фиксируется в meta.json (``thumbnail_file``).
+    Фрагмент (section): папка ``<slug>_part{frm}-{to}_<video_id>/``,
+    в meta.json — поле ``section`` {from, to}.
     Все файлы пишутся атомарно (*.tmp + os.replace).
 
     :param thumb_opener: инъекция ``(url, timeout) -> bytes`` для тестов.
     :return: словарь путей {dir, meta, report, thumb?, srt?, vtt?, json?, txt?, md?} (строки).
     """
     video_id = meta.get("video_id") or "noid"
-    video_dir = Path(out_dir) / f"{slug(meta.get('title'), video_id)}_{video_id}"
+    section_suffix = ""
+    if section is not None:
+        section_suffix = f"_{sections_mod.section_key(section[0], section[1])}"
+    video_dir = Path(out_dir) / f"{slug(meta.get('title'), video_id)}{section_suffix}_{video_id}"
     video_dir.mkdir(parents=True, exist_ok=True)
 
     record = dict(meta)
@@ -204,6 +223,8 @@ def write_video(
     record["tool_version"] = __version__
     if origin == "whisper" and asr_model:
         record["asr_model"] = asr_model
+    if section is not None:
+        record["section"] = {"from": float(section[0]), "to": float(section[1])}
     try:
         record["stats"] = compute_stats(segments, record.get("duration"))
     except Exception:

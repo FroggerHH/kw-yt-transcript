@@ -74,9 +74,10 @@
 - [ ] Проблема: `uv tool install` даёт бесцветный --help (argparse без цветов везде). Решение stdlib-ANSI: подсветка help (usage/секции/опции) + прогресс/ok/fail; TTY-детект, NO_COLOR + --no-color, пайп — без цветов
 - [ ] tests: цвета на TTY-стабе, тишина на пайпе/NO_COLOR; README-строка; Gates: pytest зелёный
 
-## Волна 21: Фрагменты видео [ ] (queued, ПОСЛЕ волн 19–20 — трогает cli.py/formats/outputs)
-- [ ] `--from SEC --to SEC` (mm:ss/секунды) на fetch: обрезка сегментов по диапазону (границы клиппаются), meta-поле section, отдельная папка с суффиксом, пометка в report
-- [ ] tests: клиппинг unit + CLI exit-коды; README/ARCH/completion; Gates: pytest зелёный, ruff чисто
+## Волна 21: Фрагменты видео [x] (done 17:56, 224 passed, fix-3)
+- [x] sections.py (parse_ts mm:ss/hh:mm:ss/секунды, clip пересечением, section_key partMMSS); cli --from/--to (exit 2, клип после fetch)
+- [x] outputs: суффикс _part + meta.section + раздельный resume; report-пометка; тесты (9) + README(EN)/completion/ARCH
+- [x] Gates: pytest 224, ruff clean, --help exit 0; находка: completion не хватало library/clean/--no-color → волна 22
 
 ## Волна 22: AI-agent skill [ ] (queued, ПОСЛЕ волн 20–21 — README правится многими)
 - [ ] SKILL.md (Agent Skills spec: name/description/frontmatter): когда использовать kw-yt (транскрипты для анализа, RAG-корпус, поиск), как (команды, exit-коды, форматы, без API-ключа, origin-маркировка), примеры

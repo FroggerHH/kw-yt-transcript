@@ -13,7 +13,7 @@ _kw_yt() {
             COMPREPLY=( $(compgen -W "srt vtt json txt md jsonl csv all" -- "$cur") )
             return 0
             ;;
-        --langs|--whisper-model|--jobs|-j|--out|-o|--from-file|--in|--context|--limit|--port)
+        --langs|--whisper-model|--jobs|-j|--out|-o|--from-file|--in|--context|--limit|--port|--from|--to)
             return 0
             ;;
     esac
@@ -36,7 +36,7 @@ _kw_yt() {
             return 0
             ;;
         "")
-            COMPREPLY=( $(compgen -W "search serve export stats --from-file --out --langs --format --no-fallback-whisper --whisper-model --jobs --resume --version" -- "$cur") )
+            COMPREPLY=( $(compgen -W "search serve export stats library clean --from-file --out --langs --format --from --to --no-fallback-whisper --whisper-model --jobs --resume --version --no-color" -- "$cur") )
             return 0
             ;;
     esac

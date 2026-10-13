@@ -152,3 +152,11 @@ tests/           — stubs yt-dlp/transcript/whisper, без сети (M5: XDG t
   NO_COLOR/TERM=dumb), `_ColorHelpFormatter` (usage/заголовки/опции;
   на 3.14 гасит и stdlib-тему через `color=`/`_set_color`), красный
   «Ошибка:», зелёный ok / красный FAIL в прогрессе, сводки — plain.
+
+## v0.2 Волна 21 (фрагменты --from/--to, аддитивно)
+- `sections.py`: `parse_ts` (mm:ss/hh:mm:ss/секунды → float, мусор — ValueError),
+  `clip_segments` (пересечение [frm, to), реплики как есть), `section_key`
+  (part0130-0245). CLI: обе границы сразу (иначе exit 2), фильтр после получения
+  (Whisper качает всё аудио — честно). Папка `<slug>_part{frm}-{to}_<id>`,
+  `meta.section`, пометка «Фрагмент» в report; `find_ready(..., section_key)` —
+  полный и фрагмент не матчат друг друга (slug без подчёркиваний).

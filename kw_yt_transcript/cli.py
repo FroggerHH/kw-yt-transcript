@@ -24,6 +24,7 @@ from kw_yt_transcript import __version__, asr, metadata, outputs, transcript
 from kw_yt_transcript import config as config_mod
 from kw_yt_transcript import export as export_mod
 from kw_yt_transcript import search as search_mod
+from kw_yt_transcript import sections as sections_mod
 from kw_yt_transcript import serve as serve_mod
 from kw_yt_transcript import storage as storage_mod
 from kw_yt_transcript.inputs import parse_inputs_with_errors
@@ -194,6 +195,20 @@ def build_parser() -> argparse.ArgumentParser:
         choices=["srt", "vtt", "json", "txt", "md", "jsonl", "csv", "all"],
         default="all",
         help="Формат вывода (по умолчанию all — все форматы).",
+    )
+    p.add_argument(
+        "--from",
+        dest="from_ts",
+        metavar="SEC",
+        default=None,
+        help="Начало фрагмента (mm:ss или секунды; нужен и --to).",
+    )
+    p.add_argument(
+        "--to",
+        dest="to_ts",
+        metavar="SEC",
+        default=None,
+        help="Конец фрагмента (mm:ss или секунды; нужен и --from).",
     )
     p.add_argument(
         "--no-fallback-whisper",
@@ -468,11 +483,14 @@ def _process_video(
     whisper_model: str,
     out_dir: Path,
     formats_sel: str,
+    section: tuple[float, float] | None = None,
 ) -> dict[str, Any]:
     """Одно видео: метаданные → субтитры (или Whisper) → файлы.
 
     Не бросает исключений: неуспех возвращается как result с ``error``.
     При падении get_metadata в entries сохраняется hint (video_id/url).
+    Фрагмент (section) фильтрует реплики после получения, папка и meta
+    получают суффикс/поле section.
     """
     meta: dict[str, Any] | None = None
     try:
@@ -490,6 +508,8 @@ def _process_video(
                     meta.get("url") or source, model_name=whisper_model
                 )
             lang = None
+        if section is not None:
+            segments = sections_mod.clip_segments(segments, section[0], section[1])
         paths = outputs.write_video(
             out_dir,
             meta,
@@ -498,6 +518,7 @@ def _process_video(
             formats_sel,
             transcript_lang=lang,
             asr_model=whisper_model if origin == "whisper" else None,
+            section=section,
         )
         return {
             "meta": meta,
@@ -620,6 +641,28 @@ def _main_fetch(argv: list[str]) -> int:
         return 2
     use_whisper = not args.no_fallback_whisper
 
+    # Фрагмент: обе границы сразу, до любой сети. Субтитры/аудио берутся
+    # целиком, реплики фильтруются после (Whisper качает всё аудио — честно).
+    section: tuple[float, float] | None = None
+    if args.from_ts is not None or args.to_ts is not None:
+        if args.from_ts is None or args.to_ts is None:
+            _error("фрагмент задаётся парой: укажите и --from, и --to.")
+            return 2
+        try:
+            frm = sections_mod.parse_ts(args.from_ts)
+        except ValueError as e:
+            _error(str(e))
+            return 2
+        try:
+            to = sections_mod.parse_ts(args.to_ts)
+        except ValueError as e:
+            _error(str(e))
+            return 2
+        if not frm < to:
+            _error(f"--from ({args.from_ts}) должен быть меньше --to ({args.to_ts}).")
+            return 2
+        section = (frm, to)
+
     # Корень: флаг > конфиг > библиотека. Папку создаём только когда точно
     # есть работа (ниже), чтобы ошибочные прогоны не трогали диск.
     out_dir = storage_mod.resolve_root(args.out, cfg)
@@ -738,12 +781,13 @@ def _main_fetch(argv: list[str]) -> int:
     vnums = {p: k + 1 for k, p in enumerate(video_order)}
     n_videos = len(video_order)
     if args.resume:
+        section_key = sections_mod.section_key(*section) if section is not None else None
         for p in video_order:
             if p in slots:
                 continue
             source, hint_id = plan[p][1]
             vid = _guess_video_id(source, hint_id)
-            ready = outputs.find_ready(out_dir, vid)
+            ready = outputs.find_ready(out_dir, vid, section_key)
             if ready is None:
                 continue
             record = _load_ready_record(ready)
@@ -771,7 +815,8 @@ def _main_fetch(argv: list[str]) -> int:
     def _run(task: tuple[int, str, str | None]) -> dict[str, Any]:
         _, source, hint_id = task
         return _process_video(
-            source, hint_id, langs, use_whisper, whisper_model, out_dir, args.format
+            source, hint_id, langs, use_whisper, whisper_model, out_dir, args.format,
+            section,
         )
 
     if need:

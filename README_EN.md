@@ -96,6 +96,9 @@ kw-yt dQw4w9WgXcQ --no-fallback-whisper
 # Different Whisper model (default small)
 kw-yt dQw4w9WgXcQ --whisper-model medium
 
+# Video fragment 01:30–02:45 (subtitles fetched whole, then lines clipped)
+kw-yt dQw4w9WgXcQ --from 01:30 --to 02:45
+
 # Fast batch: 8 parallel downloads, skip finished items
 kw-yt --from-file links.txt --jobs 8 --resume
 
@@ -134,6 +137,8 @@ All options:
 | `--out, -o DIR` | `library` | results folder (own storage when unset) |
 | `--langs LANGS` | `ru,en` | subtitle languages, comma-separated, by priority |
 | `--format` | `all` | `srt`/`vtt`/`json`/`txt`/`md`/`jsonl`/`csv`/`all` (`jsonl` — RAG lines, `csv` — table) |
+| `--from SEC` | — | fragment start (`mm:ss` or seconds; `--to` also required) |
+| `--to SEC` | — | fragment end (`mm:ss` or seconds; `--from` also required) |
 | `--no-fallback-whisper` | off | don't run speech recognition when no subtitles exist |
 | `--whisper-model MODEL` | `small` | faster-whisper model |
 | `--jobs, -j N` | `4` | parallel downloads (1–16, order in `index.json` is stable) |
@@ -201,7 +206,8 @@ Stale views/likes up to a day — by design. Cache errors silently fall back to 
 
 ## Output structure
 
-Default root is the library (see above); layout inside the root:
+Default root is the library (see above); layout inside the root
+(`--from/--to` fragment — `<slug>_part0130-0245_<id>/` folder + `section` field in `meta.json`):
 
 ```
 out/

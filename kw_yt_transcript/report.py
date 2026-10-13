@@ -202,6 +202,18 @@ def render_report(
             'style="max-width:100%;border-radius:8px">\n'
         )
 
+    section_html = ""
+    section = meta.get("section") if isinstance(meta.get("section"), dict) else {}
+    try:
+        sec_from = float(section.get("from"))
+        sec_to = float(section.get("to"))
+    except (TypeError, ValueError):
+        sec_from = sec_to = None
+    if sec_from is not None and sec_to is not None:
+        section_html = (
+            f"<p class=\"meta\">Фрагмент {_mmss(sec_from)}–{_mmss(sec_to)}</p>\n"
+        )
+
     ai_banner = ""
     if origin in ("auto", "whisper"):
         ai_banner = (
@@ -220,7 +232,7 @@ def render_report(
         f"Дата: {html.escape(date, quote=False)} | "
         f"Длительность: {_mmss(duration)} | "
         f"Источник: {html.escape(_origin_label(origin), quote=False)} | "
-        f"Язык: {html.escape(str(lang), quote=False)}</p>\n{watch}</header>\n"
+        f"Язык: {html.escape(str(lang), quote=False)}</p>\n{section_html}{watch}</header>\n"
         f"{ai_banner}"
         f"<section class=\"stats\"><h2>Статистика</h2>\n"
         f"<p>Слов: {words} | Символов: {chars} | "
