@@ -122,6 +122,26 @@ def test_readme_flags_exist_in_parser():
     assert not unknown, f"флаги из README без парсера: {sorted(unknown)}"
 
 
+README_EN = Path(__file__).parent.parent / "README_EN.md"
+
+
+def test_readme_en_exists_and_matches():
+    """Английская версия: существует, не огрызок, ключевые секции и версия."""
+    assert README_EN.is_file(), "README_EN.md отсутствует"
+    en = README_EN.read_text(encoding="utf-8")
+    ru = readme_text()
+    assert len(en) > 0.6 * len(ru), f"EN слишком короткий: {len(en)} vs RU {len(ru)}"
+    for marker in (
+        "Installation",
+        "Usage",
+        "Output structure",
+        "kw-yt search",
+        "transcript.srt",
+        "0.2.0",
+    ):
+        assert marker in en, marker
+
+
 def test_help_and_version_exit_0():
     with pytest.raises(SystemExit) as e:
         cli_mod.main(["--help"])

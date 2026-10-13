@@ -70,7 +70,9 @@
 - [x] uv.lock (35 пакетов) + .python-version 3.14; CI на setup-uv (matrix 3.11–3.13); README uv-first, pip — альтернатива
 - [x] Gates: `uv sync --locked` чисто, pytest 188, ruff чисто; статус — только разрешённые файлы
 
-## Волна 15: Multilanguage README [ ] (queued, ПОСЛЕ волны 14 — обе правят README)
+## Волна 15: Multilanguage README [x] (done 17:03, 189 passed, fix-3)
+- [x] README_EN.md 1:1 (73% объёма RU, команды без перевода) + шапки-ссылки + тест EN
+- [x] Gates: pytest 189, ruff clean (первая попытка частично записала файлы до rate limit — учтено в retry)
 - [ ] README_EN.md — полный английский перевод 1:1; RU основной; языковые шапки-ссылки в обоих
 - [ ] test_readme: EN существует + ключевые секции + та же версия; Gates: pytest зелёный
 

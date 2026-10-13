@@ -2,6 +2,8 @@
 
 [![CI](https://github.com/FroggerHH/kw-yt-transcript/actions/workflows/ci.yml/badge.svg)](https://github.com/FroggerHH/kw-yt-transcript/actions)
 
+English version: README_EN.md.
+
 > Проект разработан при участии ИИ. Текст с origin auto/whisper распознан ИИ (машинный слух) — возможны ошибки, сверяйте важные места с аудио.
 
 Консольная утилита для скачивания метаданных и полных транскриптов видео YouTube.
