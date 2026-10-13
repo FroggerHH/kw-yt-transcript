@@ -98,6 +98,53 @@ def test_playlist_expands_to_videos(monkeypatch, tmp_path):
     assert read_index(out)["_type"] == "playlist"
 
 
+def test_multi_playlist_is_batch(monkeypatch, tmp_path):
+    patch_all(monkeypatch)
+    monkeypatch.setattr(
+        cli_mod,
+        "expand_playlist",
+        lambda url: [f"https://www.youtube.com/watch?v={VIDS[0]}"]
+        if "PL1" in url
+        else [f"https://www.youtube.com/watch?v={VIDS[1]}"],
+    )
+    out = tmp_path / "out"
+    urls = [
+        "https://www.youtube.com/playlist?list=PL1",
+        "https://www.youtube.com/playlist?list=PL2",
+    ]
+    assert cli_mod.main(urls + ["-o", str(out)]) == 0
+    index = read_index(out)
+    assert index["_type"] == "batch"
+    assert len(index["entries"]) == 2
+
+
+def test_playlist_plus_video_is_batch(monkeypatch, tmp_path):
+    patch_all(monkeypatch)
+    monkeypatch.setattr(
+        cli_mod,
+        "expand_playlist",
+        lambda url: [f"https://www.youtube.com/watch?v={VIDS[1]}"],
+    )
+    out = tmp_path / "out"
+    url = "https://www.youtube.com/playlist?list=PL123"
+    assert cli_mod.main([url, VIDS[0], "-o", str(out)]) == 0
+    index = read_index(out)
+    assert index["_type"] == "batch"
+    assert len(index["entries"]) == 2
+
+
+def test_empty_playlist_writes_index_and_exit_2(monkeypatch, tmp_path):
+    patch_all(monkeypatch)
+    monkeypatch.setattr(cli_mod, "expand_playlist", lambda url: [])
+    out = tmp_path / "out"
+    url = "https://www.youtube.com/playlist?list=PLEMPTY"
+    assert cli_mod.main([url, "-o", str(out)]) == 2
+    index = read_index(out)
+    assert index["_type"] == "playlist"
+    assert index["entries"] == []
+    assert index["failed"] == 0
+
+
 def test_whisper_fallback_used(monkeypatch, tmp_path):
     patch_all(monkeypatch, no_subs=("9bZkp7q19f0",))
     out = tmp_path / "out"

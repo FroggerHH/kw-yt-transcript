@@ -40,19 +40,11 @@ def _first_available(tlist: Any, langs: list[str]) -> Any | None:
     return None
 
 
-def _detect_origin(api: Any, video_id: str, langs: list[str]) -> str:
-    """origin через list().find_transcript().is_generated; неизвестно → 'manual'.
-
-    fetch() предпочитает ручные субтитры, поэтому 'manual' — честный дефолт,
-    если список недоступен, а fetch сработал.
-    """
-    try:
-        transcript = _first_available(api.list(video_id), langs)
-    except Exception:
-        transcript = None
-    if transcript is None:
-        return "manual"
-    return _origin_of(transcript)
+def _no_subs_message(video_id: str) -> str:
+    return (
+        f"Для видео {video_id!r} субтитры не найдены. "
+        "Уберите --no-fallback-whisper, чтобы попробовать Whisper (pip install .[asr])."
+    )
 
 
 def get_transcript(
@@ -62,15 +54,18 @@ def get_transcript(
 ) -> tuple[list[dict[str, Any]], str]:
     """Получить субтитры видео.
 
+    Один вызов ``list()`` + один ``fetch()``: сначала находим транскрипт
+    (заодно узнаём origin), затем качаем его сегменты — объект транскрипта
+    переиспользуется, двойного запроса сегментов нет.
+
     :param video_id: id видео YouTube.
     :param languages: языки по приоритету.
-    :param api_factory: callable() -> объект с методами
-        ``fetch(video_id, languages=[...])`` (результат — с ``to_raw_data()``)
-        и ``list(video_id)`` (результат — с ``find_transcript()``,
-        итерируемый, элементы — с ``is_generated`` и ``fetch()``).
+    :param api_factory: callable() -> объект с методом ``list(video_id)``
+        (результат — с ``find_transcript()``, итерируемый, элементы —
+        с ``is_generated`` и ``fetch()`` с ``to_raw_data()``).
         По умолчанию — реальный ``YouTubeTranscriptApi()``; в тестах — stub.
     :return: (segments [{text, start, duration}], origin 'manual'|'auto').
-    :raises NoTranscriptError: субтитров нет ни на одном языке.
+    :raises NoTranscriptError: субтитров нет ни на одном языке или они пустые.
     """
     if api_factory is None:
         from youtube_transcript_api import YouTubeTranscriptApi
@@ -80,27 +75,18 @@ def get_transcript(
     langs = list(languages)
 
     try:
-        segments = _normalize(api.fetch(video_id, languages=langs).to_raw_data())
-    except Exception:
-        # Запрошенных языков нет — берём первый доступный из списка.
-        try:
-            transcript = _first_available(api.list(video_id), langs)
-        except Exception as e:
-            raise NoTranscriptError(
-                f"Для видео {video_id!r} субтитры не найдены. "
-                "Распознавание речи (Whisper) появится в Фазе 3."
-            ) from e
-        if transcript is None:
-            raise NoTranscriptError(
-                f"Для видео {video_id!r} субтитры не найдены. "
-                "Распознавание речи (Whisper) появится в Фазе 3."
-            )
-        try:
-            segments = _normalize(transcript.fetch().to_raw_data())
-        except Exception as e:
-            raise NoTranscriptError(
-                f"Не удалось загрузить субтитры видео {video_id!r}: {e}"
-            ) from e
-        return segments, _origin_of(transcript)
-
-    return segments, _detect_origin(api, video_id, langs)
+        tlist = api.list(video_id)
+    except Exception as e:
+        raise NoTranscriptError(_no_subs_message(video_id)) from e
+    transcript_obj = _first_available(tlist, langs)
+    if transcript_obj is None:
+        raise NoTranscriptError(_no_subs_message(video_id))
+    try:
+        segments = _normalize(transcript_obj.fetch().to_raw_data())
+    except Exception as e:
+        raise NoTranscriptError(
+            f"Не удалось загрузить субтитры видео {video_id!r}: {e}"
+        ) from e
+    if not segments:
+        raise NoTranscriptError(f"Для видео {video_id!r} получены пустые субтитры.")
+    return segments, _origin_of(transcript_obj)

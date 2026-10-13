@@ -18,7 +18,9 @@
 ## Фаза 4: Качество/упаковка [x] (done 2026-10-13)
 - [x] README.md RU (установка pipx/uv, примеры single/multi/playlist, форматы, Whisper extra) — локальные команды проверены (C3), live-check оставлен user-side
 - [x] M4 полный прогон: pytest 66 passed + --help/--version exit 0; M5 изоляция (XDG temp, stubs, аудит без сети)
-- [ ] Oracle-review x2 до zero-actionable, exhaustion passes 1–8, done check C5
+- [x] Oracle-review раунд 1 (ora-1): verdict fix-list, 15 findings, блокеров нет.
+- [x] Findings fix (fix-1): все 15 отработаны (п.13 осознанно без изменений), 72 passed.
+- [ ] Oracle-review раунд 2 (background): подтвердить zero-actionable. Затем exhaustion passes 1–8 + done check C5.
 
 ## Future backlog (не делаем)
 - Перевод транскрипта, YouTube Data API v3, TUI/Web — причины в SPEC non-goals.

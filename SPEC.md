@@ -15,7 +15,7 @@
    - источник 2 (fallback): Whisper ASR по аудиодорожке, если субтитров нет
    - форматы вывода: с таймкодами (SRT/VTT/JSON) + читаемый текст с абзацами (TXT/Markdown)
 4. **CLI на русском:** `--help`, понятные ошибки, коды выхода, пакетный прогон с прогрессом.
-5. **Выходная структура:** папка на видео (slug/id), `meta.json`, `transcript.srt`, `transcript.vtt`, `transcript.txt`, `transcript.md`.
+5. **Выходная структура:** папка на видео (slug/id), `meta.json`, `transcript.srt`, `transcript.vtt`, `transcript.json`, `transcript.txt`, `transcript.md`.
 
 ## Non-goals
 - Скачивание видео/аудио как цель (только временное аудио для Whisper, с очисткой).

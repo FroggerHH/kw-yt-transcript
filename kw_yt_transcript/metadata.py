@@ -75,7 +75,7 @@ def get_metadata(
     if info.get("_type") == "playlist":
         raise MetadataError(
             f"Вход {url_or_id!r} — это плейлист, а не одиночное видео. "
-            "Пакетная обработка плейлистов появится в Фазе 3."
+            "Используйте URL плейлиста как batch-вход."
         )
 
     video_id = info.get("id")

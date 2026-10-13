@@ -93,10 +93,8 @@ def to_vtt(segments: list[dict[str, Any]], meta: dict[str, Any] | None = None) -
 
 
 def to_json(segments: list[dict[str, Any]], meta: dict[str, Any] | None = None) -> str:
-    """JSON: list[{start, duration, text}]. Пусто → ``""``."""
+    """JSON: list[{start, duration, text}]. Пусто → ``"[]"`` (валидный JSON)."""
     del meta
-    if not segments:
-        return ""
     return json.dumps(
         [{"start": s["start"], "duration": s["duration"], "text": s["text"]} for s in segments],
         ensure_ascii=False,

@@ -11,10 +11,10 @@ kw_yt_transcript/
   cli.py         — argparse (RU), коды выхода 0/1/2, прогресс batch
   inputs.py      — входы → список задач: single URL/id | CSV/space/newline | --from-file | playlist URL
   metadata.py    — yt-dlp YoutubeDL.extract_info(download=False); sanitize_info; _type video vs playlist
-  transcript.py  — YouTubeTranscriptApi().fetch(list) languages=[ru,en]; find_manually_created→generated; to_raw_data
-  asr.py         — lazy faster-whisper fallback (WhisperModel small/int8, vad_filter); интерфейс segments(start,end,text)
-  formats.py     — SRT/VTT через youtube_transcript_api.formatters; TXT/MD читаемый (группировка по паузам >2с / ~800 символов в абзац)
-  outputs.py     — <out>/<slug>_<id>/meta.json + transcript.{srt,vtt,json,txt,md}; playlist index.json; errors.log
+  transcript.py  — YouTubeTranscriptApi().list() → find_transcript(langs) → fetch() → to_raw_data; is_generated → origin manual/auto
+  asr.py         — lazy faster-whisper fallback (WhisperModel small/int8, vad_filter); интерфейс segments(start,duration,text)
+  formats.py     — свои сериализаторы SRT/VTT (таймкоды HH:MM:SS,mmm / HH:MM:SS.mmm совместимы с formatters); TXT/MD читаемый (группировка по паузам >2с / ~800 символов в абзац)
+  outputs.py     — <out>/<slug>_<id>/meta.json + transcript.{srt,vtt,json,txt,md}; index.json {_type, entries, failed}; ошибки — в entries[].error + stderr
 tests/           — stubs yt-dlp/transcript/whisper, без сети (M5: XDG temp, PATH stubs, no network)
 ```
 
@@ -30,4 +30,5 @@ tests/           — stubs yt-dlp/transcript/whisper, без сети (M5: XDG t
 - Fallback языков `ru→en→first available` через `languages=[...]` + `TranscriptList` при `NotAvailableLanguage`.
 - Читаемый текст: склейка сегментов, разбивка на абзацы по паузе/д Schlange, MD с header (title/channel/date/origin) + главы если есть.
 - Whisper — опциональный extra, lazy import, временное аудио чистится.
-- Сеть только в `metadata/transcript/asr`; тесты мокают.
+- Свои сериализаторы SRT/VTT вместо youtube_transcript_api.formatters: форматтерам нужны FetchedTranscript-объекты, а у нас плоские dict-сегменты {text, start, duration}; таймкоды совпадают.
+- Сеть только в `metadata`/`transcript`/`asr` + `cli.expand_playlist` (flat extract оглавления); тесты мокают.

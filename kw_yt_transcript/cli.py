@@ -185,13 +185,13 @@ def main(argv: list[str] | None = None) -> int:
 
     # Плейлисты разворачиваем в видео; неуспешный expand — ошибка-запись, batch идёт дальше.
     video_tasks: list[tuple[str, str | None]] = []
-    playlist_url: str | None = None
+    playlist_urls: list[str] = []
+    has_video_jobs = False
     results: list[dict[str, Any]] = []
     for job in jobs:
         if job["kind"] == "playlist":
             url = job.get("url") or job.get("raw", "")
-            if playlist_url is None:
-                playlist_url = url
+            playlist_urls.append(url)
             try:
                 entries = expand_playlist(url)
             except Exception as e:
@@ -201,12 +201,22 @@ def main(argv: list[str] | None = None) -> int:
             for entry_url in entries:
                 video_tasks.append((entry_url, None))
         else:
+            has_video_jobs = True
             video_tasks.append(
                 (job.get("url") or job.get("video_id") or job.get("raw", ""), job.get("video_id"))
             )
 
+    # 'playlist' — только если вход ровно один плейлист и все задачи из него, иначе 'batch'.
+    index_playlist_url = (
+        playlist_urls[0] if len(playlist_urls) == 1 and not has_video_jobs else None
+    )
+
     if not video_tasks and not results:
         print("Ошибка: по заданным входам видео не найдено.", flush=True)
+        try:
+            outputs.write_index(out_dir, [], index_playlist_url)
+        except OSError as e:
+            print(f"Ошибка: не могу записать index.json: {e}", flush=True)
         return 2
 
     total = len(video_tasks)
@@ -224,7 +234,7 @@ def main(argv: list[str] | None = None) -> int:
             )
 
     try:
-        index_path = outputs.write_index(out_dir, results, playlist_url)
+        index_path = outputs.write_index(out_dir, results, index_playlist_url)
     except OSError as e:
         print(f"Ошибка: не могу записать index.json: {e}", flush=True)
         return 2

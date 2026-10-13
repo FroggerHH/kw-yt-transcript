@@ -82,7 +82,8 @@ def test_md_without_meta():
 
 def test_empty_segments():
     assert to_srt([]) == ""
-    assert to_json([]) == ""
+    assert to_json([]) == "[]"
+    assert json.loads(to_json([])) == []
     assert to_txt([]) == ""
     assert to_md([]) == ""
     assert to_vtt([]).startswith("WEBVTT")

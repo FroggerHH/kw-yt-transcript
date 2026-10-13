@@ -33,8 +33,10 @@ class StubTranscript:
 class StubTranscriptList:
     def __init__(self, transcripts):
         self._transcripts = transcripts
+        self.seen_languages = None
 
     def find_transcript(self, langs):
+        self.seen_languages = list(langs)
         for lang in langs:
             for t in self._transcripts:
                 if t.language_code == lang:
@@ -46,27 +48,18 @@ class StubTranscriptList:
 
 
 class StubApi:
-    """Двойник YouTubeTranscriptApi. fetch_ok=False — fetch всегда падает (fallback-путь)."""
+    """Двойник YouTubeTranscriptApi: list() -> find_transcript() -> fetch()."""
 
-    def __init__(self, by_lang, generated, fetch_ok=True):
+    def __init__(self, by_lang, generated):
         self._by_lang = by_lang
         self._generated = generated
-        self._fetch_ok = fetch_ok
-        self.seen_languages = None
-
-    def fetch(self, video_id, languages=None):
-        self.seen_languages = list(languages or [])
-        if not self._fetch_ok:
-            raise RuntimeError("NoTranscriptFound")
-        for lang in self.seen_languages:
-            if lang in self._by_lang:
-                return StubFetched(self._by_lang[lang])
-        raise RuntimeError("NoTranscriptFound")
+        self.last_list = None
 
     def list(self, video_id):
-        return StubTranscriptList(
+        self.last_list = StubTranscriptList(
             [StubTranscript(lang, self._generated.get(lang, False), raw) for lang, raw in self._by_lang.items()]
         )
+        return self.last_list
 
 
 def ru_en_api():
@@ -76,7 +69,7 @@ def ru_en_api():
 def test_ru_priority_and_manual_origin():
     api = ru_en_api()
     segments, origin = get_transcript("dQw4w9WgXcQ", api_factory=lambda: api)
-    assert api.seen_languages == ["ru", "en"]
+    assert api.last_list.seen_languages == ["ru", "en"]
     assert segments == [
         {"text": s["text"], "start": float(s["start"]), "duration": float(s["duration"])} for s in SEGMENTS
     ]
@@ -87,13 +80,13 @@ def test_ru_priority_and_manual_origin():
 def test_custom_languages_passed_through():
     api = StubApi({"en": SEGMENTS}, {"en": True})
     segments, origin = get_transcript("dQw4w9WgXcQ", languages=("en",), api_factory=lambda: api)
-    assert api.seen_languages == ["en"]
+    assert api.last_list.seen_languages == ["en"]
     assert len(segments) == len(SEGMENTS)
     assert origin == "auto"
 
 
 def test_fallback_to_first_available():
-    api = StubApi({"en": SEGMENTS}, {"en": True}, fetch_ok=False)
+    api = StubApi({"en": SEGMENTS}, {"en": True})
     segments, origin = get_transcript("dQw4w9WgXcQ", languages=("ru", "de"), api_factory=lambda: api)
     assert len(segments) == len(SEGMENTS)
     assert origin == "auto"
@@ -105,11 +98,14 @@ def test_no_transcripts_raises_russian():
         get_transcript("dQw4w9WgXcQ", api_factory=lambda: api)
 
 
+def test_empty_subtitles_raise():
+    api = StubApi({"ru": []}, {"ru": False})
+    with pytest.raises(NoTranscriptError, match="пустые"):
+        get_transcript("dQw4w9WgXcQ", api_factory=lambda: api)
+
+
 def test_list_failure_raises_no_transcript():
     class DeadApi(StubApi):
-        def fetch(self, video_id, languages=None):
-            raise RuntimeError("TranscriptsDisabled")
-
         def list(self, video_id):
             raise RuntimeError("TranscriptsDisabled")
 

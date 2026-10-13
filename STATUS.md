@@ -23,7 +23,12 @@
 - [x] Фаза 2 (fix-1): metadata.py + transcript.py + formats.py + 24 tests. Gates: 38 passed, --help exit 0, SRT/VTT regex валидны.
 - [x] Фаза 3 (fix-1): outputs.py + asr.py + cli wiring batch + 23 tests. Gates: 61 passed, --help exit 0, slug-транслит ок.
 - [x] Фаза 4 (fix-1): README RU + CHANGELOG + classifiers + test_readme (5). Gates: 66 passed, M5 XDG-изоляция + аудит, C3 локальные команды, live-check user-side.
-- [ ] Oracle-review раунд 1 (background): diff SPEC/ARCH vs код. Затем exhaustion passes 1–8 + done check C5.
+- [x] Oracle-review раунд 1 (ora-1): verdict fix-list, 15 findings, блокеров нет. Findings fix (fix-1): все отработаны, 72 passed.
+- [ ] Oracle-review раунд 2 (background): подтвердить zero-actionable. Затем exhaustion passes 1–8 + done check C5.
+
+## Next
+1. Дождаться ora-2, при verdict pass — exhaustion passes и done check C5.
+2. Live-check остаётся user-side (интернет): команда в README.
 - Next: Фаза 3 batch+ASR, Фаза 4 README/верификация/Oracle-review.
 
 ## Next

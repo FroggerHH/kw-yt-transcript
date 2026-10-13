@@ -100,6 +100,25 @@ def test_transcribe_failure_wrapped(tmp_path):
         transcribe_whisper(str(audio), model_factory=lambda name: DeadModel())
 
 
+def test_custom_downloader_failure_wrapped():
+    def dead_downloader(url):
+        raise RuntimeError("ERROR: Private video")
+
+    with pytest.raises(ASRError, match="Не удалось скачать аудио"):
+        transcribe_whisper(
+            "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            model_factory=stub_factory(StubModel([StubSeg("текст", 0.0, 1.0)])),
+            downloader=dead_downloader,
+        )
+
+
+def test_empty_result_raises(tmp_path):
+    audio = tmp_path / "audio.mp3"
+    audio.write_bytes(b"fake-audio")
+    with pytest.raises(ASRError, match="пустой результат"):
+        transcribe_whisper(str(audio), model_factory=stub_factory(StubModel([])))
+
+
 def test_default_download_tmpdir_cleaned(monkeypatch, tmp_path):
     created = []
     real_mktemp = asr.tempfile.mkdtemp

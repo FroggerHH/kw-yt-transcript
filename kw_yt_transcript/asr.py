@@ -74,7 +74,10 @@ def transcribe_whisper(
         if Path(source).is_file():
             audio = str(source)
         elif downloader is not None:
-            audio = downloader(str(source))  # чужой файл — не удаляем
+            try:
+                audio = downloader(str(source))  # чужой файл — не удаляем
+            except Exception as e:
+                raise ASRError(f"Не удалось скачать аудио {str(source)!r}: {e}") from e
         else:
             tmpdir = tempfile.mkdtemp(prefix="kw-yt-asr-")
             audio = _download_bestaudio(str(source), tmpdir)
@@ -99,6 +102,8 @@ def transcribe_whisper(
             ]
         except Exception as e:
             raise ASRError(f"Whisper не смог распознать аудио: {e}") from e
+        if not segments:
+            raise ASRError("Whisper не распознал речь (пустой результат).")
         return segments, "whisper"
     finally:
         if tmpdir is not None:
