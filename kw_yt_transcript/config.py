@@ -1,9 +1,10 @@
-"""Конфиг kw-yt (v0.2, Волна 2).
+"""Конфиг kw-yt (v0.2, Волна 2 + правки 3a).
 
 Только stdlib (tomllib — Python 3.11+). Файл
 ``XDG_CONFIG_HOME/kw-yt/config.toml`` (fallback ``~/.config/kw-yt/config.toml``).
-Отсутствие/битый файл → дефолты + русское предупреждение в stderr, не падение.
-Приоритет значений: CLI-флаги > конфиг > дефолты (применяет cli.py).
+Отсутствие файла → молча DEFAULTS; нечитаемый/битый → русское предупреждение
+в stderr; на Python <3.11 → предупреждение «нужен Python 3.11+ (tomllib)».
+Не падает никогда. Приоритет значений: CLI-флаги > конфиг > дефолты (cli.py).
 """
 
 from __future__ import annotations
@@ -54,13 +55,23 @@ def _coerce(section: dict[str, Any]) -> dict[str, Any]:
 
 def load_config(path: str | Path | None = None) -> dict[str, Any]:
     """Прочитать конфиг. Всегда возвращает полный словарь, не падает."""
+    if sys.version_info < (3, 11):  # noqa: UP036 — защита запуска из исходников на Python 3.10 (pyproject требует 3.11+, но `python -m` его не проверяет)
+        print(
+            "Предупреждение: для чтения конфига нужен Python 3.11+ (tomllib). "
+            "Используются значения по умолчанию.",
+            file=sys.stderr,
+            flush=True,
+        )
+        return dict(DEFAULTS)
     cfg_path = Path(path) if path is not None else config_path()
     try:
         raw = cfg_path.read_bytes()
-    except OSError:
+    except FileNotFoundError:
+        return dict(DEFAULTS)
+    except OSError as e:
         print(
-            f"Предупреждение: конфиг не найден ({cfg_path}), "
-            "используются значения по умолчанию.",
+            f"Предупреждение: не могу прочитать конфиг {cfg_path}: {e}. "
+            "Используются значения по умолчанию.",
             file=sys.stderr,
             flush=True,
         )

@@ -186,6 +186,7 @@ def test_write_index_also_writes_html(tmp_path):
         }
     ]
     index_path = _wi(tmp_path, results)
+    assert index_path.is_file()
     index_html = Path(tmp_path) / "index.html"
     assert index_html.is_file()
     body = index_html.read_text(encoding="utf-8")

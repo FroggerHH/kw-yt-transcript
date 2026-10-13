@@ -10,13 +10,16 @@ from __future__ import annotations
 import html
 from typing import Any
 
+from kw_yt_transcript.timefmt import mmss as _mmss
+
 _ORIGIN_LABELS = {"manual": "ручные субтитры", "auto": "автосубтитры", "whisper": "Whisper ASR"}
 
 _CSS = (
     "body{font-family:sans-serif;max-width:900px;margin:0 auto;padding:16px;line-height:1.5}"
     "header{border-bottom:1px solid #ccc;margin-bottom:16px}"
     ".meta{color:#444}.stats{background:#f6f6f6;padding:12px;border-radius:8px}"
-    "table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:6px 8px;text-align:left}"
+    "table{border-collapse:collapse;width:100%}"
+    "th,td{border:1px solid #ccc;padding:6px 8px;text-align:left}"
     "mark{background:yellow}.seg{margin:6px 0}.ts{white-space:nowrap}"
     "#search{width:100%;padding:8px;font-size:1em;margin:12px 0}"
 )
@@ -42,18 +45,6 @@ input.addEventListener("input",function(){
   if(countEl){countEl.textContent=q?("Найдено совпадений: "+n):"";}
 });
 })();"""
-
-
-def _mmss(seconds: float | None) -> str:
-    if seconds is None:
-        return "—"
-    try:
-        total = max(0, int(seconds))
-    except Exception:
-        return "—"
-    h, rem = divmod(total, 3600)
-    m, s = divmod(rem, 60)
-    return f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
 
 
 def _origin_label(origin: str | None) -> str:

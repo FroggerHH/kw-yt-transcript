@@ -24,6 +24,12 @@ def serve_dir(root: str | Path, port: int = 0) -> int:
     if not root_path.is_dir():
         print(f"Ошибка: папка корпуса не найдена: {root}.", file=sys.stderr, flush=True)
         return 2
+    if not (root_path / "index.html").is_file():
+        print(
+            f"Предупреждение: index.html не найден в {root_path} — раздаю как есть.",
+            file=sys.stderr,
+            flush=True,
+        )
     try:
         server = make_server(root_path, port)
     except OSError as e:

@@ -81,9 +81,40 @@ def test_search_missing_root_no_crash(tmp_path):
 
 def test_search_hit_shape(corpus):
     (res,) = search_corpus(corpus, "продолжение", context_sec=0)
-    assert set(res) == {"video_id", "title", "dir", "hits"}
+    assert set(res) == {"video_id", "title", "dir", "direct_count", "hits"}
     assert res["title"] == "Первое видео"
-    assert res["hits"] == [{"start": 5.0, "text": "Продолжение без совпадений."}]
+    assert res["direct_count"] == 1
+    assert res["hits"] == [
+        {"start": 5.0, "text": "Продолжение без совпадений.", "direct": True}
+    ]
+
+
+def test_search_marks_direct_and_context(corpus):
+    (res,) = search_corpus(corpus, "продолжение", context_sec=10.0)
+    by_start = {h["start"]: h["direct"] for h in res["hits"]}
+    assert by_start[5.0] is True
+    assert by_start[0.0] is False
+    assert res["direct_count"] == 1
+
+
+def test_search_window_boundary_included(tmp_path):
+    out = tmp_path / "out"
+    d = out / "v_vid00000009"
+    d.mkdir(parents=True)
+    d.joinpath("transcript.json").write_text(
+        json.dumps(
+            [
+                {"text": "маркер тут", "start": 0.0, "duration": 1.0},
+                {"text": "ровно на границе", "start": 15.0, "duration": 1.0},
+                {"text": "далеко", "start": 15.1, "duration": 1.0},
+            ]
+        ),
+        encoding="utf-8",
+    )
+    res = search_corpus(out, "маркер", context_sec=15.0)
+    assert [h["start"] for h in res[0]["hits"]] == [0.0, 15.0]
+    res2 = search_corpus(out, "маркер", context_sec=14.9)
+    assert [h["start"] for h in res2[0]["hits"]] == [0.0]
 
 
 def test_cli_search_exit_0_and_ru_output(corpus, capsys):
@@ -91,6 +122,8 @@ def test_cli_search_exit_0_and_ru_output(corpus, capsys):
     out = capsys.readouterr().out
     assert "Первое видео" in out and "Второе видео" in out
     assert "00:00" in out and "совпадений" in out
+    assert "  > 00:00" in out, "прямые вхождения помечены >"
+    assert "\n    00:05" in out, "контекст — без >"
 
 
 def test_cli_search_exit_1_when_missing(corpus, capsys):

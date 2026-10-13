@@ -4,8 +4,10 @@
 - Причина: пользователь счёл v0.1 минимальной. Scope v0.2 в SPEC.md (HTML, статистика, search, serve, jobs/resume/cache/config).
 - [x] Волна 1 (fix-2, 14:34): stats.py + report.py + outputs (report.html/index.html/stats в meta). Gates: 116 passed, --help exit 0.
 - [x] Волна 2 (fix-2): search.py + serve.py + cli (subcommands, --jobs, --resume, кэш TTL, конфиг). Gates: 147 passed, serve 200 (тест), --resume без сети (тест), live search 57 хитов exit 0.
-- [ ] Волна 3 (oracle review волн 1–2 → fixer fixes + README v0.2 + 0.2.0 + live). Замечание: warning отсутствующего конфига → только о битом.
-- Next: волна 4 (экспорт jsonl/csv, completion, thumbnails) если время до 17:31 осталось.
+- [x] Review v0.2 (ora-2): fix-list, 11 пунктов (3 medium: конфиг-шум, resume-критерий, search O(n)), блокеров нет. Потоки/кэш/serve проверены ok.
+- [x] Волна 3a (fix-2 + оркестратор): правки №1–10 + версии 3.11+ везде. Gates: 159 passed, ruff clean, --help exit 0.
+- [ ] Волна 3b (fixer, background): README v0.2 + версия 0.2.0 + CHANGELOG + live acceptance п.11 (report.html, search, serve 200).
+- Next: волна 4 (jsonl/csv, completion, thumbnails) если время до 17:31 осталось.
 
 ---
 

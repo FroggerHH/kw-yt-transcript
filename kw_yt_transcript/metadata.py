@@ -11,6 +11,8 @@ import re
 from collections.abc import Callable
 from typing import Any
 
+from kw_yt_transcript import cache as cache_mod
+
 #: Голый video id (без URL) нормализуем в watch-URL перед передачей в yt-dlp.
 _VIDEO_ID_RE = re.compile(r"^[A-Za-z0-9_-]{11}$")
 
@@ -19,9 +21,6 @@ _DEFAULT_OPTS: dict[str, Any] = {"quiet": True, "skip_download": True, "noplayli
 
 class MetadataError(Exception):
     """Не удалось получить метаданные видео."""
-
-
-from kw_yt_transcript import cache as cache_mod
 
 
 def _default_ydl_factory(opts: dict[str, Any]):

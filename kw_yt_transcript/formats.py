@@ -11,6 +11,8 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from kw_yt_transcript.timefmt import mmss as _mmss
+
 #: Пауза между сегментами (сек), начинающая новый абзац.
 PARAGRAPH_GAP = 2.0
 
@@ -39,15 +41,6 @@ def _srt_ts(seconds: float) -> str:
 def _vtt_ts(seconds: float) -> str:
     h, m, s, ms = _split_ts(_ms_total(seconds))
     return f"{h:02d}:{m:02d}:{s:02d}.{ms:03d}"
-
-
-def _mmss(seconds: float | None) -> str:
-    if seconds is None:
-        return "—"
-    total = max(0, int(seconds))
-    h, rem = divmod(total, 3600)
-    m, s = divmod(rem, 60)
-    return f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
 
 
 def paragraphs(segments: list[dict[str, Any]]) -> list[str]:

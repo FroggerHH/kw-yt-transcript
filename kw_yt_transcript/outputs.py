@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import os
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -53,8 +53,25 @@ def slug(title: str | None, video_id: str) -> str:
     return base or video_id
 
 
+def _is_complete(video_dir: Path) -> bool:
+    """Готовая папка: meta.json (со stats и origin) + transcript.json + report.html."""
+    if not ((video_dir / "transcript.json").is_file() and (video_dir / "report.html").is_file()):
+        return False
+    try:
+        record = json.loads((video_dir / "meta.json").read_text(encoding="utf-8"))
+    except Exception:
+        return False
+    return (
+        isinstance(record, dict)
+        and isinstance(record.get("stats"), dict)
+        and bool(record.get("origin"))
+    )
+
+
 def find_ready(out_dir: str | Path, video_id: str | None) -> Path | None:
-    """Найти готовую папку видео ``*_<video_id>`` с meta.json (для --resume).
+    """Найти готовую папку видео ``*_<video_id>`` (для --resume).
+
+    Готовая = meta.json (со stats и origin) + transcript.json + report.html.
 
     :return: путь к папке или None.
     """
@@ -65,7 +82,7 @@ def find_ready(out_dir: str | Path, video_id: str | None) -> Path | None:
         if not base.is_dir():
             return None
         for cand in sorted(base.glob(f"*_{video_id}")):
-            if cand.is_dir() and (cand / "meta.json").is_file():
+            if cand.is_dir() and (cand / "meta.json").is_file() and _is_complete(cand):
                 return cand
     except Exception:
         return None
@@ -120,7 +137,7 @@ def write_video(
     record = dict(meta)
     record["origin"] = origin
     record["transcript_lang"] = transcript_lang
-    record["fetched_at"] = datetime.now(timezone.utc).isoformat()
+    record["fetched_at"] = datetime.now(UTC).isoformat()
     record["tool_version"] = __version__
     if origin == "whisper" and asr_model:
         record["asr_model"] = asr_model
@@ -150,8 +167,10 @@ def write_video(
         report_meta = dict(record)
         report_html = render_report(report_meta, segments, record["stats"], origin)
     except Exception:
-        report_html = "<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<meta charset=\"utf-8\">\n"
-        report_html += "<title>Отчёт</title>\n</head>\n<body><p>Отчёт недоступен.</p>\n</body>\n</html>\n"
+        report_html = (
+            "<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<meta charset=\"utf-8\">\n"
+            "<title>Отчёт</title>\n</head>\n<body><p>Отчёт недоступен.</p>\n</body>\n</html>\n"
+        )
     report_path = video_dir / "report.html"
     _atomic_write_text(report_path, report_html)
     paths["report"] = str(report_path)

@@ -1,7 +1,7 @@
 # ARCHITECTURE.md — kw-yt-transcript
 
 ## Решение (C4): Python-CLI
-- **Выбор:** Python 3.10+ (в системе 3.14.7), `pipx`/`uv` установка, entry point `kw-yt`.
+- **Выбор:** Python 3.11+ (в системе 3.14.7), `pipx`/`uv` установка, entry point `kw-yt`.
 - **Runner-up:** Node/Bun-CLI + `youtube-transcript-plus@2.0.0` — отклонён: npm-пакет Node-only, нет плейлистов, метаданные всё равно через yt-dlp (Python-embedding зрелее), Whisper-экосистема Python stronger. Детали в `DECISIONS.md`.
 - **Зависимости (pin в pyproject):** `yt-dlp>=2026.8.19`, `youtube-transcript-api==1.2.4`, `faster-whisper==1.2.1` (опциональный extra `asr`), stdlib остальное (argparse, json, re, pathlib).
 
@@ -65,5 +65,31 @@ tests/           — stubs yt-dlp/transcript/whisper, без сети (M5: XDG t
 - **config.py** — `load_config()` читает `XDG_CONFIG_HOME/kw-yt/config.toml`
   (fallback `~/.config`), stdlib tomllib, секция `[tool.defaults]` (также
   `[defaults]`/корень): langs (строка), out, jobs (int), whisper_model;
-  отсутствие/битый — дефолты + предупреждение в stderr. Приоритет:
-  CLI-флаги > конфиг > дефолты. `requires-python >=3.11` ради tomllib.
+  отсутствие файла — молча дефолты, нечитаемый/битый — предупреждение в stderr.
+  Приоритет: CLI-флаги > конфиг > дефолты. `requires-python >=3.11` ради tomllib.
+
+## v0.2 Волна 3a (правки Oracle review, аддитивно)
+- **config тишина (oracle №1):** отсутствие файла — молча DEFAULTS без stderr;
+  предупреждаем только о нечитаемом/битом + guard `sys.version_info < (3,11)`
+  («нужен Python 3.11+ (tomllib)»).
+- **Сильный resume (№2):** `find_ready` требует комплект
+  `meta.json` (со stats и origin) + `transcript.json` + `report.html`;
+  неполная папка (только meta.json) — не готова, идёт сеть.
+- **search O(n) (№3):** окно контекста — bisect по отсортированным starts
+  (границы включительно), вместо вложенного цикла.
+- **cli прогресс (№4):** `as_completed` с future→index; все записи
+  (видео/skip/ошибки expand) — через слоты плана по порядку входов, index
+  стабилен. Мусорные токены без позиций — error-записи первыми (ограничение
+  inputs-модуля, зафиксировано).
+- **serve (№5):** нет `index.html` в root — предупреждение в stderr, служим дальше.
+- **search вывод (№6):** `direct_count` отдельно в выдаче; заголовок группы —
+  число прямых совпадений; строки: `>` прямые, пробел — контекст.
+- **Версии (№7, done оркестратором):** везде Python 3.11+ (ARCH:3, pyproject
+  requires-python/classifiers, ruff target py311, ruff select E/F/W/I/UP).
+- **resume+плейлист (№8):** `--resume` не избавляет от чтения оглавления
+  плейлиста — flat expand всегда идёт по сети; пропускаются только видео.
+- **timefmt.py (№9):** общий `mmss` (`MM:SS`, часы `H:MM:SS`) для
+  formats/report/search; форматные тесты не менялись.
+- **Whisper-семафор (№10):** `threading.Semaphore(2)` вокруг whisper-ветки
+  `_process_video`, остальной batch параллелен.
+- **№11:** keep-as-is, без действий.

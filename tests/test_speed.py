@@ -4,6 +4,9 @@
 """
 
 import json
+import sys
+import threading
+import time
 from pathlib import Path
 
 import pytest
@@ -88,6 +91,64 @@ def test_jobs_parallel_order_stable(monkeypatch, tmp_path):
     assert index["failed"] == 0
 
 
+def test_playlist_error_keeps_input_position(monkeypatch, tmp_path):
+    patch_all(monkeypatch)
+
+    def dead_expand(url):
+        raise MetadataError("Не удалось прочитать плейлист")
+
+    monkeypatch.setattr(cli_mod, "expand_playlist", dead_expand)
+    out = tmp_path / "out"
+    url = "https://www.youtube.com/playlist?list=PLDEAD"
+    assert cli_mod.main([VIDS[0], url, VIDS[1], "-o", str(out)]) == 1
+    index = json.loads((out / "index.json").read_text(encoding="utf-8"))
+    assert [e["video_id"] for e in index["entries"]] == [VIDS[0], None, VIDS[1]]
+    assert "плейлист" in index["entries"][1]["error"].lower()
+
+
+def test_garbage_errors_lead_entries(monkeypatch, tmp_path):
+    # Мусорные токены без позиций: их записи — первыми (ограничение inputs).
+    patch_all(monkeypatch)
+    out = tmp_path / "out"
+    assert cli_mod.main([VIDS[0], "!!!", VIDS[1], "-o", str(out)]) == 1
+    index = json.loads((out / "index.json").read_text(encoding="utf-8"))
+    assert index["entries"][0]["error"] and "Непонятный вход" in index["entries"][0]["error"]
+    assert [e["video_id"] for e in index["entries"][1:]] == [VIDS[0], VIDS[1]]
+
+
+def test_whisper_semaphore_limits_concurrency(monkeypatch, tmp_path):
+    state = {"cur": 0, "max": 0}
+    lock = threading.Lock()
+
+    def fake_meta(source):
+        hit = next(v for v in VIDS if v in source)
+        return make_meta(hit)
+
+    def fake_transcript(video_id, languages=None):
+        raise NoTranscriptError("нет субтитров")
+
+    def fake_whisper(*a, **k):
+        with lock:
+            state["cur"] += 1
+            state["max"] = max(state["max"], state["cur"])
+        try:
+            time.sleep(0.05)
+        finally:
+            with lock:
+                state["cur"] -= 1
+        return SEGMENTS, "whisper"
+
+    monkeypatch.setattr(metadata_mod, "get_metadata", fake_meta)
+    monkeypatch.setattr(transcript_mod, "get_transcript", fake_transcript)
+    monkeypatch.setattr(asr_mod, "transcribe_whisper", fake_whisper)
+    out = tmp_path / "out"
+    assert cli_mod.main(VIDS + ["--jobs", "4", "-o", str(out)]) == 0
+    assert state["max"] <= 2, f"конкурентных whisper: {state['max']}"
+    index = json.loads((out / "index.json").read_text(encoding="utf-8"))
+    assert index["failed"] == 0
+    assert [e["origin"] for e in index["entries"]] == ["whisper"] * 3
+
+
 def test_jobs_bad_values_exit_2(monkeypatch, tmp_path):
     patch_all(monkeypatch)
     out = tmp_path / "out"
@@ -117,6 +178,34 @@ def test_find_ready_helper(tmp_path):
     found = outputs_mod.find_ready(out, VIDS[0])
     assert found is not None and found == Path(paths["dir"])
     assert outputs_mod.find_ready(out, "9bZkp7q19f0") is None
+
+
+def test_find_ready_needs_full_bundle(tmp_path):
+    out = tmp_path / "out"
+    out.mkdir()
+    paths = outputs_mod.write_video(
+        out, make_meta(VIDS[1]), SEGMENTS, "manual", formats_sel="txt"
+    )
+    assert outputs_mod.find_ready(out, VIDS[1]) is None, "нет transcript.json — не готово"
+    weak = out / f"слабая-папка_{VIDS[2]}"
+    weak.mkdir()
+    record = {**make_meta(VIDS[2]), "origin": "manual", "stats": {"words": 5}}
+    (weak / "meta.json").write_text(json.dumps(record, ensure_ascii=False), "utf-8")
+    assert outputs_mod.find_ready(out, VIDS[2]) is None, "только meta.json — не готово"
+    assert Path(paths["dir"]).name.endswith(VIDS[1])
+
+
+def test_resume_weak_dir_calls_network(monkeypatch, tmp_path):
+    out = tmp_path / "out"
+    out.mkdir()
+    weak = out / f"слабая-папка_{VIDS[0]}"
+    weak.mkdir()
+    record = {**make_meta(VIDS[0]), "origin": "manual", "stats": {"words": 5}}
+    (weak / "meta.json").write_text(json.dumps(record, ensure_ascii=False), "utf-8")
+    calls = {"meta": 0, "transcript": 0, "whisper": 0}
+    patch_all(monkeypatch, calls)
+    assert cli_mod.main([VIDS[0], "--resume", "-o", str(out)]) == 0
+    assert calls["meta"] == 1, "неполная папка — resume не срабатывает, идёт сеть"
 
 
 # --- cache ---
@@ -190,10 +279,17 @@ def _write_config(home, body):
     cfg.write_text(body, encoding="utf-8")
 
 
-def test_config_missing_gives_defaults(capsys):
+def test_config_missing_gives_defaults_silent(capsys):
     cfg = config_mod.load_config()
     assert cfg == {"langs": "ru,en", "out": "./out", "jobs": 4, "whisper_model": "small"}
-    assert "редупреждение" in capsys.readouterr().err
+    assert capsys.readouterr().err == ""
+
+
+def test_config_version_guard(monkeypatch, capsys):
+    monkeypatch.setattr(sys, "version_info", (3, 10))
+    cfg = config_mod.load_config()
+    assert cfg == {"langs": "ru,en", "out": "./out", "jobs": 4, "whisper_model": "small"}
+    assert "3.11" in capsys.readouterr().err
 
 
 def test_config_reads_tool_defaults(tmp_path, monkeypatch):

@@ -6,21 +6,12 @@
 
 from __future__ import annotations
 
+import bisect
 import json
 from pathlib import Path
 from typing import Any
 
-
-def _mmss(seconds: float | None) -> str:
-    if seconds is None:
-        return "—"
-    try:
-        total = max(0, int(seconds))
-    except Exception:
-        return "—"
-    h, rem = divmod(total, 3600)
-    m, s = divmod(rem, 60)
-    return f"{h}:{m:02d}:{s:02d}" if h else f"{m:02d}:{s:02d}"
+from kw_yt_transcript.timefmt import mmss as _mmss
 
 
 def _load_segments(tpath: Path) -> list[dict[str, Any]]:
@@ -77,8 +68,9 @@ def search_corpus(
     :param query: запрос; регистронезависимо, пробелы по краям игнорируются.
     :param context_sec: соседние реплики в ±секундах добавляются к хитам.
     :param limit: максимум видео в выдаче.
-    :return: [{video_id, title, dir, hits: [{start, text}]}], видео —
-        по числу прямых вхождений (desc), лимит — по числу видео.
+    :return: [{video_id, title, dir, direct_count, hits: [{start, text, direct}]}],
+        видео — по числу прямых вхождений (desc), лимит — по числу видео.
+        У хитов ``direct=True`` — прямое вхождение, ``False`` — контекст.
     :raises ValueError: пустой запрос, плохой limit.
     """
     q = (query or "").strip()
@@ -110,15 +102,23 @@ def search_corpus(
         direct = [i for i, s in enumerate(segments) if qfold in s["text"].casefold()]
         if not direct:
             continue
-        starts = [s["start"] for s in segments]
-        keep: set[int] = set(direct)
+        # O(n log n): окно по отсортированным starts через bisect (границы вкл.).
+        pairs = sorted(((s["start"], idx) for idx, s in enumerate(segments)))
+        s_sorted = [t for t, _ in pairs]
+        direct_set = set(direct)
+        keep: set[int] = set()
         for i in direct:
-            for j, st in enumerate(starts):
-                if j != i and abs(st - starts[i]) <= ctx:
-                    keep.add(j)
+            t = segments[i]["start"]
+            lo = bisect.bisect_left(s_sorted, t - ctx)
+            hi = bisect.bisect_right(s_sorted, t + ctx)
+            keep.update(idx for _, idx in pairs[lo:hi])
         hits = [
-            {"start": segments[j]["start"], "text": segments[j]["text"]}
-            for j in sorted(keep, key=lambda j: starts[j])
+            {
+                "start": segments[j]["start"],
+                "text": segments[j]["text"],
+                "direct": j in direct_set,
+            }
+            for j in sorted(keep, key=lambda j: segments[j]["start"])
         ]
         video_id, title = _meta_for(video_dir)
         scored.append(
@@ -129,6 +129,7 @@ def search_corpus(
                     "video_id": video_id,
                     "title": title,
                     "dir": video_dir.name,
+                    "direct_count": len(direct),
                     "hits": hits,
                 },
             )

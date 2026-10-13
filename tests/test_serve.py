@@ -52,6 +52,25 @@ def test_serve_dir_missing_dir_exit_2(tmp_path):
     assert serve_dir(tmp_path / "нет", 8000) == 2
 
 
+def test_serve_warns_without_index(tmp_path, monkeypatch, capsys):
+    served = {}
+
+    class FakeServer:
+        server_address = ("127.0.0.1", 8123)
+
+        def serve_forever(self):
+            served["yes"] = True
+            raise KeyboardInterrupt
+
+        def server_close(self):
+            served["closed"] = True
+
+    monkeypatch.setattr("kw_yt_transcript.serve.make_server", lambda *a, **k: FakeServer())
+    assert serve_dir(tmp_path, 8123) == 0
+    err = capsys.readouterr().err
+    assert "редупреждение" in err and "index.html" in err
+
+
 def test_cli_serve_bad_port_exit_2(tmp_path):
     assert cli_mod.main(["serve", str(tmp_path), "--port", "zzz"]) == 2
     assert cli_mod.main(["serve", str(tmp_path), "--port", "99999"]) == 2

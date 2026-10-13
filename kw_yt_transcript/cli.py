@@ -14,7 +14,7 @@ import json
 import re
 import sys
 import threading
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any
 
@@ -31,6 +31,10 @@ _LANG_RE = re.compile(r"^[a-z-]{2,12}$")
 
 #: Блокировка потокобезопасного прогресса batch.
 _PRINT_LOCK = threading.Lock()
+
+#: Whisper разом — не больше двух (скачивание аудио + транскрибация тяжёлые),
+#: остальной batch идёт параллельно без ограничений.
+_WHISPER_SEM = threading.Semaphore(2)
 
 #: Диапазон --jobs.
 _JOBS_MIN, _JOBS_MAX = 1, 16
@@ -245,9 +249,10 @@ def _process_video(
         except NoTranscriptError:
             if not use_whisper:
                 raise
-            segments, origin = asr.transcribe_whisper(
-                meta.get("url") or source, model_name=whisper_model
-            )
+            with _WHISPER_SEM:
+                segments, origin = asr.transcribe_whisper(
+                    meta.get("url") or source, model_name=whisper_model
+                )
             lang = None
         paths = outputs.write_video(
             out_dir,
@@ -396,19 +401,23 @@ def _main_fetch(argv: list[str]) -> int:
         )
         return 2
 
-    # Мусорные токены — error-entries, batch идёт дальше; только мусор → exit 2 без index.
-    error_results: list[dict[str, Any]] = []
+    # Мусорные токены: позиций в потоке входов inputs-модуль не сохраняет,
+    # поэтому их error-записи идут первыми; всё позиционируемое — строго
+    # по порядку входов через plan/слоты ниже.
+    leading: list[dict[str, Any]] = []
     for err in input_errors:
-        error_results.append(
+        leading.append(
             {"meta": None, "dir": None, "origin": None, "transcript_lang": None, "error": err}
         )
         print(f"вход: FAIL: {err}", file=sys.stderr)
     if not jobs:
         return 2
 
-    # Плейлисты разворачиваем в видео; неуспешный expand — ошибка-запись, batch идёт дальше.
-    # Пропущенные записи плейлиста — skipped error-entries (len(entries)==len(playlist)).
-    video_tasks: list[tuple[str, str | None]] = []
+    # План в порядке входов: ("video", (source, hint)) или ("done", result).
+    # Ошибки expand плейлиста и пропущенные записи — записями "done" на месте
+    # плейлиста, а не префиксом: порядок index.json повторяет порядок входов.
+    # Плейлисты разворачиваем последовательно; неуспешный expand — ошибка-запись.
+    plan: list[tuple[str, Any]] = []
     playlist_urls: list[str] = []
     has_video_jobs = False
     for job in jobs:
@@ -418,36 +427,50 @@ def _main_fetch(argv: list[str]) -> int:
             try:
                 items = expand_playlist(url)
             except Exception as e:
-                error_results.append(
-                    {
-                        "meta": None,
-                        "dir": None,
-                        "origin": None,
-                        "transcript_lang": None,
-                        "error": str(e),
-                    }
-                )
-                print(f"плейлист {url}: FAIL: {e}", file=sys.stderr)
-                continue
-            for item in items:
-                if item.get("error") or not item.get("url"):
-                    error_results.append(
+                plan.append(
+                    (
+                        "done",
                         {
                             "meta": None,
                             "dir": None,
                             "origin": None,
                             "transcript_lang": None,
-                            "error": item.get("error")
-                            or f"Запись плейлиста {url!r} пропущена.",
-                        }
+                            "error": str(e),
+                        },
                     )
-                    print(f"плейлист {url}: SKIP: {error_results[-1]['error']}", file=sys.stderr)
+                )
+                print(f"плейлист {url}: FAIL: {e}", file=sys.stderr)
+                continue
+            for item in items:
+                if item.get("error") or not item.get("url"):
+                    plan.append(
+                        (
+                            "done",
+                            {
+                                "meta": None,
+                                "dir": None,
+                                "origin": None,
+                                "transcript_lang": None,
+                                "error": item.get("error")
+                                or f"Запись плейлиста {url!r} пропущена.",
+                            },
+                        )
+                    )
+                    print(
+                        f"плейлист {url}: SKIP: {plan[-1][1]['error']}", file=sys.stderr
+                    )
                 else:
-                    video_tasks.append((item["url"], None))
+                    plan.append(("video", (item["url"], None)))
         else:
             has_video_jobs = True
-            video_tasks.append(
-                (job.get("url") or job.get("video_id") or job.get("raw", ""), job.get("video_id"))
+            plan.append(
+                (
+                    "video",
+                    (
+                        job.get("url") or job.get("video_id") or job.get("raw", ""),
+                        job.get("video_id"),
+                    ),
+                )
             )
 
     # 'playlist' — только если вход ровно один плейлист и все задачи из него, иначе 'batch'.
@@ -455,8 +478,7 @@ def _main_fetch(argv: list[str]) -> int:
         playlist_urls[0] if len(playlist_urls) == 1 and not has_video_jobs else None
     )
 
-    total = len(video_tasks)
-    if not video_tasks and not error_results:
+    if not plan and not leading:
         print("Ошибка: по заданным входам видео не найдено.", file=sys.stderr, flush=True)
         try:
             outputs.write_index(out_dir, [], index_playlist_url)
@@ -464,10 +486,19 @@ def _main_fetch(argv: list[str]) -> int:
             print(f"Ошибка: не могу записать index.json: {e}", file=sys.stderr, flush=True)
         return 2
 
-    # --resume: готовые папки (*_<video_id>/meta.json) — в слоты без сети.
-    slots: list[dict[str, Any] | None] = [None] * total
+    # --resume: готовые папки (meta+transcript+report) — в слоты без сети.
+    slots: dict[int, dict[str, Any]] = {}
+    for p, item in enumerate(plan):
+        if item[0] == "done":
+            slots[p] = item[1]
+    video_order = [p for p, item in enumerate(plan) if item[0] == "video"]
+    vnums = {p: k + 1 for k, p in enumerate(video_order)}
+    n_videos = len(video_order)
     if args.resume:
-        for i, (source, hint_id) in enumerate(video_tasks):
+        for p in video_order:
+            if p in slots:
+                continue
+            source, hint_id = plan[p][1]
             vid = _guess_video_id(source, hint_id)
             ready = outputs.find_ready(out_dir, vid)
             if ready is None:
@@ -476,7 +507,7 @@ def _main_fetch(argv: list[str]) -> int:
             meta_ready = dict(record)
             if not meta_ready.get("video_id"):
                 meta_ready["video_id"] = vid
-            slots[i] = {
+            slots[p] = {
                 "meta": meta_ready,
                 "dir": ready.name,
                 "origin": record.get("origin"),
@@ -484,9 +515,15 @@ def _main_fetch(argv: list[str]) -> int:
                 "error": None,
                 "skipped": True,
             }
+            label = hint_id or source
+            with _PRINT_LOCK:
+                print(
+                    f"[{vnums[p]}/{n_videos}] {label} ... skip (уже готово)",
+                    file=sys.stderr,
+                )
 
-    # Параллельная обработка (порядок слотов = порядок входов, index стабилен).
-    ordered_need = [(i, s, h) for i, (s, h) in enumerate(video_tasks) if slots[i] is None]
+    # Параллельная обработка; index стабилен: результаты — по слотам плана.
+    need = [(p, plan[p][1][0], plan[p][1][1]) for p in video_order if p not in slots]
 
     def _run(task: tuple[int, str, str | None]) -> dict[str, Any]:
         _, source, hint_id = task
@@ -494,32 +531,37 @@ def _main_fetch(argv: list[str]) -> int:
             source, hint_id, langs, use_whisper, whisper_model, out_dir, args.format
         )
 
-    if ordered_need:
+    if need:
         with ThreadPoolExecutor(max_workers=jobs_n) as executor:
-            for (i, source, hint_id), result in zip(
-                ordered_need, executor.map(_run, ordered_need)
-            ):
-                slots[i] = result
+            futures = {executor.submit(_run, t): t for t in need}
+            for future in as_completed(futures):
+                p, source, hint_id = futures[future]
+                try:
+                    result = future.result()
+                except Exception as e:  # _process_video не бросает, но перестрахуемся
+                    result = {
+                        "meta": {"video_id": hint_id, "url": source, "title": None},
+                        "dir": None,
+                        "origin": None,
+                        "transcript_lang": None,
+                        "error": f"Внутренняя ошибка обработки: {e}",
+                    }
+                slots[p] = result
                 label = hint_id or source
                 with _PRINT_LOCK:
                     if result["error"]:
                         print(
-                            f"[{i + 1}/{total}] {label} ... FAIL: {result['error']}",
+                            f"[{vnums[p]}/{n_videos}] {label} ... FAIL: {result['error']}",
                             file=sys.stderr,
                         )
                     else:
                         print(
-                            f"[{i + 1}/{total}] {result['meta'].get('video_id')} ... ok",
+                            f"[{vnums[p]}/{n_videos}] {result['meta'].get('video_id')} ... ok",
                             file=sys.stderr,
                         )
-    for i, (source, hint_id) in enumerate(video_tasks):
-        if slots[i] is not None and slots[i].get("skipped"):
-            label = hint_id or source
-            with _PRINT_LOCK:
-                print(f"[{i + 1}/{total}] {label} ... skip (уже готово)", file=sys.stderr)
 
-    results: list[dict[str, Any]] = list(error_results)
-    results.extend(r for r in slots if r is not None)
+    results: list[dict[str, Any]] = list(leading)
+    results.extend(slots[p] for p in range(len(plan)))
 
     try:
         outputs.write_index(out_dir, results, index_playlist_url)
@@ -577,14 +619,17 @@ def _main_search(argv: list[str]) -> int:
     if not found:
         print(f"По запросу «{query}» ничего не найдено.", flush=True)
         return 1
-    total_hits = sum(len(v["hits"]) for v in found)
-    print(f"Результаты поиска «{query}»: видео {len(found)}, вхождений {total_hits}.")
+    total_direct = sum(v.get("direct_count", len(v["hits"])) for v in found)
+    print(f"Результаты поиска «{query}»: видео {len(found)}, вхождений {total_direct}.")
     for entry in found:
         title = entry.get("title") or entry.get("video_id") or "—"
-        print(f"\nВидео: {title} [{entry.get('video_id') or '—'}] "
-              f"— совпадений: {len(entry['hits'])}")
+        print(
+            f"\nВидео: {title} [{entry.get('video_id') or '—'}] "
+            f"— совпадений: {entry.get('direct_count', len(entry['hits']))}"
+        )
         for hit in entry["hits"]:
-            print(f"  {search_mod.format_ts(hit.get('start'))} {hit.get('text', '')}")
+            mark = ">" if hit.get("direct") else " "
+            print(f"  {mark} {search_mod.format_ts(hit.get('start'))} {hit.get('text', '')}")
     return 0
 
 

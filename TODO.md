@@ -14,9 +14,13 @@
 - [x] Gates: pytest 147, serve 200 локально (тест), --resume без сети (тест)
 - [ ] Замечание оркестратора в волну 3: warning «конфиг не найден» шумит каждый запуск → молчать при отсутствии, предупреждать только о битом
 
-## Волна 3: Релиз 0.2.0 [ ] (после волны 2)
-- [ ] Oracle-review diff, фикс findings, README v0.2, версия 0.2.0, CHANGELOG
-- [ ] Live: single → report.html; search по живому корпусу; Gates M4/M5
+## Волна 3a: Правки review v0.2 [x] (done 14:46, 159 passed, ruff clean)
+- [x] №1–10 oracle fix-list (конфиг-тишина, сильный resume, search O(n), as_completed, serve-warn, direct_count, версии 3.11, resume-дока, общий _mmss, whisper-семафор). №11 keep-as-is.
+- [x] Версии унифицированы оркестратором (3.11+ везде, ruff select E/F/W/I/UP, guard с noqa, datetime.UTC). Gates: pytest 159, ruff clean, --help exit 0
+
+## Волна 3b: Релиз 0.2.0 [ ] (после 3a)
+- [ ] README v0.2, версия 0.2.0, CHANGELOG
+- [ ] Live acceptance п.11: single → report.html открывается; search по живому корпусу; serve 200; Gates M4/M5
 - [ ] Если время до 17:31 осталось — волна 4 (jsonl/csv экспорт, completion, thumbnails в HTML, главы-файлы)
 
 ## v0.1 (done)
