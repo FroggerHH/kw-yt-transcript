@@ -53,6 +53,25 @@ def slug(title: str | None, video_id: str) -> str:
     return base or video_id
 
 
+def find_ready(out_dir: str | Path, video_id: str | None) -> Path | None:
+    """Найти готовую папку видео ``*_<video_id>`` с meta.json (для --resume).
+
+    :return: путь к папке или None.
+    """
+    if not video_id:
+        return None
+    base = Path(out_dir)
+    try:
+        if not base.is_dir():
+            return None
+        for cand in sorted(base.glob(f"*_{video_id}")):
+            if cand.is_dir() and (cand / "meta.json").is_file():
+                return cand
+    except Exception:
+        return None
+    return None
+
+
 def _resolve_formats(formats_sel: str) -> list[str]:
     if formats_sel == "all":
         return list(FORMATS)
@@ -92,7 +111,7 @@ def write_video(
     tool_version и asr_model (только при origin 'whisper').
     Все файлы пишутся атомарно (*.tmp + os.replace).
 
-    :return: словарь путей {dir, meta, srt?, vtt?, json?, txt?, md?} (строки).
+    :return: словарь путей {dir, meta, report, srt?, vtt?, json?, txt?, md?} (строки).
     """
     video_id = meta.get("video_id") or "noid"
     video_dir = Path(out_dir) / f"{slug(meta.get('title'), video_id)}_{video_id}"

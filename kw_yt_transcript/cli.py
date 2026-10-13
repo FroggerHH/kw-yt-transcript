@@ -1,20 +1,27 @@
-"""CLI kw-yt: разбор аргументов и пакетная загрузка (Фаза 3).
+"""CLI kw-yt: разбор аргументов и пакетная загрузка (Фаза 3 + v0.2 Волна 2).
 
 Полный цикл: parse_inputs → get_metadata → get_transcript
 (или Whisper-fallback) → write_video + index.json.
-Импорты только stdlib + свои модули: --help работает без сети
-и без опциональных зависимостей (yt-dlp/transcript/whisper — лениво).
+Субкоманды: `search` (поиск по корпусу), `serve` (просмотр корпуса).
+Иначе — старое fetch-поведение. Импорты yt-dlp/transcript/whisper — лениво,
+поэтому --help работает без сети и опциональных зависимостей.
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import sys
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
 
 from kw_yt_transcript import __version__, asr, metadata, outputs, transcript
+from kw_yt_transcript import config as config_mod
+from kw_yt_transcript import search as search_mod
+from kw_yt_transcript import serve as serve_mod
 from kw_yt_transcript.inputs import parse_inputs_with_errors
 from kw_yt_transcript.metadata import MetadataError
 from kw_yt_transcript.transcript import NoTranscriptError
@@ -22,21 +29,36 @@ from kw_yt_transcript.transcript import NoTranscriptError
 #: Языки --langs после нормализации: латиница/дефис, 2–12 символов.
 _LANG_RE = re.compile(r"^[a-z-]{2,12}$")
 
+#: Блокировка потокобезопасного прогресса batch.
+_PRINT_LOCK = threading.Lock()
+
+#: Диапазон --jobs.
+_JOBS_MIN, _JOBS_MAX = 1, 16
+
 EXAMPLES = """Примеры:
-  kw-yt dQw4w9WgXcQ
-      Одно видео по id.
+   kw-yt dQw4w9WgXcQ
+       Одно видео по id.
 
-  kw-yt https://www.youtube.com/watch?v=dQw4w9WgXcQ
-      Одно видео по URL.
+   kw-yt https://www.youtube.com/watch?v=dQw4w9WgXcQ
+       Одно видео по URL.
 
-  kw-yt dQw4w9WgXcQ,9bZkp7q19f0 "https://youtu.be/9bZkp7q19f0"
-      Несколько видео через запятую/пробел.
+   kw-yt dQw4w9WgXcQ,9bZkp7q19f0 "https://youtu.be/9bZkp7q19f0"
+       Несколько видео через запятую/пробел.
 
-  kw-yt --from-file links.txt --out ./out
-      Список входов из файла (по одному на строку, # — комментарий).
+   kw-yt --from-file links.txt --out ./out
+       Список входов из файла (по одному на строку, # — комментарий).
 
-  kw-yt "https://www.youtube.com/playlist?list=PLxxxxxxxx" --format txt
-      Плейлист целиком, только читаемый текст.
+   kw-yt "https://www.youtube.com/playlist?list=PLxxxxxxxx" --format txt
+       Плейлист целиком, только читаемый текст.
+
+   kw-yt --jobs 8 --resume dQw4w9WgXcQ 9bZkp7q19f0
+       Параллельно, готовые папки пропускаются.
+
+   kw-yt search "ключевое слово" --in ./out
+       Поиск по сохранённым транскриптам.
+
+   kw-yt serve ./out --port 8000
+       Просмотр корпуса в браузере.
 """
 
 
@@ -63,14 +85,15 @@ def build_parser() -> argparse.ArgumentParser:
         "--out",
         "-o",
         metavar="ПАПКА",
-        default="./out",
-        help="Папка для результатов (по умолчанию ./out).",
+        default=None,
+        help="Папка для результатов (по умолчанию ./out или из конфига).",
     )
     p.add_argument(
         "--langs",
         metavar="ЯЗЫКИ",
-        default="ru,en",
-        help="Языки субтитров через запятую, по приоритету (по умолчанию ru,en).",
+        default=None,
+        help="Языки субтитров через запятую, по приоритету "
+        "(по умолчанию ru,en или из конфига).",
     )
     p.add_argument(
         "--format",
@@ -86,14 +109,78 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--whisper-model",
         metavar="МОДЕЛЬ",
-        default="small",
-        help="Модель Whisper для fallback (по умолчанию small).",
+        default=None,
+        help="Модель Whisper для fallback (по умолчанию small или из конфига).",
+    )
+    p.add_argument(
+        "--jobs",
+        "-j",
+        metavar="N",
+        default=None,
+        help="Параллельных загрузок (1–16, по умолчанию 4 или из конфига).",
+    )
+    p.add_argument(
+        "--resume",
+        action="store_true",
+        help="Пропускать видео, чья папка уже готова (сеть не вызывается).",
     )
     p.add_argument(
         "--version",
         action="version",
         version=f"%(prog)s {__version__}",
         help="Показать версию и выйти.",
+    )
+    return p
+
+
+def build_search_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(
+        prog="kw-yt search",
+        description="Поиск по сохранённым транскриптам корпуса.",
+    )
+    p.add_argument(
+        "query",
+        nargs="+",
+        help="Запрос (несколько слов — в кавычках или без).",
+    )
+    p.add_argument(
+        "--in",
+        dest="in_dir",
+        metavar="ПАПКА",
+        default=None,
+        help="Корень корпуса (по умолчанию ./out или из конфига).",
+    )
+    p.add_argument(
+        "--context",
+        metavar="СЕК",
+        default=None,
+        help="Контекст: соседние реплики в ±секундах (по умолчанию 15).",
+    )
+    p.add_argument(
+        "--limit",
+        metavar="N",
+        default=None,
+        help="Максимум видео в выдаче (по умолчанию 20).",
+    )
+    return p
+
+
+def build_serve_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(
+        prog="kw-yt serve",
+        description="Раздавать готовый корпус (index.html/report.html) по HTTP.",
+    )
+    p.add_argument(
+        "directory",
+        nargs="?",
+        default=None,
+        help="Корень корпуса (по умолчанию ./out или из конфига).",
+    )
+    p.add_argument(
+        "--port",
+        metavar="N",
+        default=None,
+        help="Порт (по умолчанию 8000, 0 — выбрать автоматически).",
     )
     return p
 
@@ -190,12 +277,50 @@ def _process_video(
         }
 
 
-def main(argv: list[str] | None = None) -> int:
-    """Точка входа. Коды: 0 — всё ок, 1 — частичные ошибки, 2 — usage/фатальное.
+def _guess_video_id(source: str | None, hint_id: str | None) -> str | None:
+    """video id для --resume без сети: hint или id из URL."""
+    if hint_id:
+        return hint_id
+    if not source:
+        return None
+    for pat in (
+        r"[?&]v=([A-Za-z0-9_-]{11})",
+        r"youtu\.be/([A-Za-z0-9_-]{11})",
+        r"/(?:shorts|live|embed)/([A-Za-z0-9_-]{11})",
+    ):
+        m = re.search(pat, source)
+        if m:
+            return m.group(1)
+    return None
 
-    Весь вывод — в stderr, stdout остаётся пустым.
+
+def _load_ready_record(video_dir: Path) -> dict[str, Any]:
+    try:
+        record = json.loads((video_dir / "meta.json").read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    return record if isinstance(record, dict) else {}
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Точка входа. Коды: 0 — всё ок, 1 — частичные ошибки/не найдено, 2 — usage.
+
+    Субкоманды `search`/`serve` — по argv[1], иначе старое fetch-поведение.
+    Fetch пишет в stderr, stdout пуст; search печатает результаты в stdout;
+    serve печатает URL в stdout.
     """
+    argv = sys.argv[1:] if argv is None else list(argv)
+    if argv and argv[0] == "search":
+        return _main_search(argv)
+    if argv and argv[0] == "serve":
+        return _main_serve(argv)
+    return _main_fetch(argv)
+
+
+def _main_fetch(argv: list[str]) -> int:
+    """Классический прогон: скачать метаданные и транскрипты."""
     args = build_parser().parse_args(argv)
+    cfg = config_mod.load_config()
 
     try:
         jobs, input_errors = parse_inputs_with_errors(args.inputs, from_file=args.from_file)
@@ -213,8 +338,9 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 2
 
-    # Ранняя валидация до любой сети: языки и модель.
-    langs = [lang.strip().lower() for lang in args.langs.split(",") if lang.strip()]
+    # Ранняя валидация до любой сети: языки, модель, jobs. Приоритет CLI > конфиг.
+    langs_raw = args.langs if args.langs is not None else cfg.get("langs", "ru,en")
+    langs = [lang.strip().lower() for lang in str(langs_raw).split(",") if lang.strip()]
     if not langs:
         langs = ["ru", "en"]
     bad_langs = [lang for lang in langs if not _LANG_RE.match(lang)]
@@ -226,17 +352,35 @@ def main(argv: list[str] | None = None) -> int:
             flush=True,
         )
         return 2
-    whisper_model = args.whisper_model.strip()
+    whisper_model = str(
+        args.whisper_model
+        if args.whisper_model is not None
+        else cfg.get("whisper_model", "small")
+    ).strip()
     if not whisper_model:
         print("Ошибка: --whisper-model не должен быть пустым.", file=sys.stderr, flush=True)
         return 2
+    jobs_raw = args.jobs if args.jobs is not None else cfg.get("jobs", 4)
+    try:
+        jobs_n = int(str(jobs_raw).strip())
+    except (TypeError, ValueError):
+        jobs_n = 0
+    if not (_JOBS_MIN <= jobs_n <= _JOBS_MAX):
+        print(
+            f"Ошибка: --jobs должен быть целым числом от {_JOBS_MIN} до {_JOBS_MAX}, "
+            f"получено {jobs_raw!r}.",
+            file=sys.stderr,
+            flush=True,
+        )
+        return 2
     use_whisper = not args.no_fallback_whisper
 
-    out_dir = Path(args.out)
+    out_raw = args.out if args.out is not None else cfg.get("out", "./out")
+    out_dir = Path(out_raw)
     try:
         out_dir.mkdir(parents=True, exist_ok=True)
     except OSError as e:
-        print(f"Ошибка: не могу создать папку {args.out!r}: {e}", file=sys.stderr, flush=True)
+        print(f"Ошибка: не могу создать папку {out_raw!r}: {e}", file=sys.stderr, flush=True)
         return 2
 
     if not jobs and not input_errors:
@@ -253,9 +397,9 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     # Мусорные токены — error-entries, batch идёт дальше; только мусор → exit 2 без index.
-    results: list[dict[str, Any]] = []
+    error_results: list[dict[str, Any]] = []
     for err in input_errors:
-        results.append(
+        error_results.append(
             {"meta": None, "dir": None, "origin": None, "transcript_lang": None, "error": err}
         )
         print(f"вход: FAIL: {err}", file=sys.stderr)
@@ -274,7 +418,7 @@ def main(argv: list[str] | None = None) -> int:
             try:
                 items = expand_playlist(url)
             except Exception as e:
-                results.append(
+                error_results.append(
                     {
                         "meta": None,
                         "dir": None,
@@ -287,7 +431,7 @@ def main(argv: list[str] | None = None) -> int:
                 continue
             for item in items:
                 if item.get("error") or not item.get("url"):
-                    results.append(
+                    error_results.append(
                         {
                             "meta": None,
                             "dir": None,
@@ -297,7 +441,7 @@ def main(argv: list[str] | None = None) -> int:
                             or f"Запись плейлиста {url!r} пропущена.",
                         }
                     )
-                    print(f"плейлист {url}: SKIP: {results[-1]['error']}", file=sys.stderr)
+                    print(f"плейлист {url}: SKIP: {error_results[-1]['error']}", file=sys.stderr)
                 else:
                     video_tasks.append((item["url"], None))
         else:
@@ -311,7 +455,8 @@ def main(argv: list[str] | None = None) -> int:
         playlist_urls[0] if len(playlist_urls) == 1 and not has_video_jobs else None
     )
 
-    if not video_tasks and not results:
+    total = len(video_tasks)
+    if not video_tasks and not error_results:
         print("Ошибка: по заданным входам видео не найдено.", file=sys.stderr, flush=True)
         try:
             outputs.write_index(out_dir, [], index_playlist_url)
@@ -319,19 +464,62 @@ def main(argv: list[str] | None = None) -> int:
             print(f"Ошибка: не могу записать index.json: {e}", file=sys.stderr, flush=True)
         return 2
 
-    total = len(video_tasks)
-    for i, (source, hint_id) in enumerate(video_tasks, 1):
-        label = hint_id or source
-        result = _process_video(
+    # --resume: готовые папки (*_<video_id>/meta.json) — в слоты без сети.
+    slots: list[dict[str, Any] | None] = [None] * total
+    if args.resume:
+        for i, (source, hint_id) in enumerate(video_tasks):
+            vid = _guess_video_id(source, hint_id)
+            ready = outputs.find_ready(out_dir, vid)
+            if ready is None:
+                continue
+            record = _load_ready_record(ready)
+            meta_ready = dict(record)
+            if not meta_ready.get("video_id"):
+                meta_ready["video_id"] = vid
+            slots[i] = {
+                "meta": meta_ready,
+                "dir": ready.name,
+                "origin": record.get("origin"),
+                "transcript_lang": record.get("transcript_lang"),
+                "error": None,
+                "skipped": True,
+            }
+
+    # Параллельная обработка (порядок слотов = порядок входов, index стабилен).
+    ordered_need = [(i, s, h) for i, (s, h) in enumerate(video_tasks) if slots[i] is None]
+
+    def _run(task: tuple[int, str, str | None]) -> dict[str, Any]:
+        _, source, hint_id = task
+        return _process_video(
             source, hint_id, langs, use_whisper, whisper_model, out_dir, args.format
         )
-        results.append(result)
-        if result["error"]:
-            print(f"[{i}/{total}] {label} ... FAIL: {result['error']}", file=sys.stderr)
-        else:
-            print(
-                f"[{i}/{total}] {result['meta'].get('video_id')} ... ok", file=sys.stderr
-            )
+
+    if ordered_need:
+        with ThreadPoolExecutor(max_workers=jobs_n) as executor:
+            for (i, source, hint_id), result in zip(
+                ordered_need, executor.map(_run, ordered_need)
+            ):
+                slots[i] = result
+                label = hint_id or source
+                with _PRINT_LOCK:
+                    if result["error"]:
+                        print(
+                            f"[{i + 1}/{total}] {label} ... FAIL: {result['error']}",
+                            file=sys.stderr,
+                        )
+                    else:
+                        print(
+                            f"[{i + 1}/{total}] {result['meta'].get('video_id')} ... ok",
+                            file=sys.stderr,
+                        )
+    for i, (source, hint_id) in enumerate(video_tasks):
+        if slots[i] is not None and slots[i].get("skipped"):
+            label = hint_id or source
+            with _PRINT_LOCK:
+                print(f"[{i + 1}/{total}] {label} ... skip (уже готово)", file=sys.stderr)
+
+    results: list[dict[str, Any]] = list(error_results)
+    results.extend(r for r in slots if r is not None)
 
     try:
         outputs.write_index(out_dir, results, index_playlist_url)
@@ -346,6 +534,82 @@ def main(argv: list[str] | None = None) -> int:
         file=sys.stderr,
     )
     return 1 if failed else 0
+
+
+def _main_search(argv: list[str]) -> int:
+    """Поиск по корпусу: группы «заголовок + mm:ss текст», exit 0/1."""
+    args = build_search_parser().parse_args(argv[1:])
+    cfg = config_mod.load_config()
+    root = args.in_dir or cfg.get("out", "./out")
+    if not Path(root).is_dir():
+        print(f"Ошибка: папка корпуса не найдена: {root}.", file=sys.stderr, flush=True)
+        return 2
+    try:
+        context_sec = 15.0 if args.context is None else float(str(args.context).strip())
+    except (TypeError, ValueError):
+        print(
+            f"Ошибка: --context должен быть числом секунд, получено {args.context!r}.",
+            file=sys.stderr,
+            flush=True,
+        )
+        return 2
+    if context_sec < 0:
+        print("Ошибка: --context не должен быть отрицательным.", file=sys.stderr, flush=True)
+        return 2
+    try:
+        limit = 20 if args.limit is None else int(str(args.limit).strip())
+    except (TypeError, ValueError):
+        print(
+            f"Ошибка: --limit должен быть целым числом, получено {args.limit!r}.",
+            file=sys.stderr,
+            flush=True,
+        )
+        return 2
+    if limit < 1:
+        print("Ошибка: --limit должен быть >= 1.", file=sys.stderr, flush=True)
+        return 2
+    query = " ".join(args.query).strip()
+    try:
+        found = search_mod.search_corpus(root, query, context_sec=context_sec, limit=limit)
+    except ValueError as e:
+        print(f"Ошибка: {e}", file=sys.stderr, flush=True)
+        return 2
+    if not found:
+        print(f"По запросу «{query}» ничего не найдено.", flush=True)
+        return 1
+    total_hits = sum(len(v["hits"]) for v in found)
+    print(f"Результаты поиска «{query}»: видео {len(found)}, вхождений {total_hits}.")
+    for entry in found:
+        title = entry.get("title") or entry.get("video_id") or "—"
+        print(f"\nВидео: {title} [{entry.get('video_id') or '—'}] "
+              f"— совпадений: {len(entry['hits'])}")
+        for hit in entry["hits"]:
+            print(f"  {search_mod.format_ts(hit.get('start'))} {hit.get('text', '')}")
+    return 0
+
+
+def _main_serve(argv: list[str]) -> int:
+    """Просмотр корпуса через HTTP."""
+    args = build_serve_parser().parse_args(argv[1:])
+    cfg = config_mod.load_config()
+    root = args.directory or cfg.get("out", "./out")
+    try:
+        port = 8000 if args.port is None else int(str(args.port).strip())
+    except (TypeError, ValueError):
+        print(
+            f"Ошибка: --port должен быть целым числом, получено {args.port!r}.",
+            file=sys.stderr,
+            flush=True,
+        )
+        return 2
+    if not (0 <= port <= 65535):
+        print(
+            f"Ошибка: --port должен быть от 0 до 65535, получено {args.port!r}.",
+            file=sys.stderr,
+            flush=True,
+        )
+        return 2
+    return serve_mod.serve_dir(root, port)
 
 
 if __name__ == "__main__":

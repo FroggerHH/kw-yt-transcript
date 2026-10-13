@@ -7,7 +7,7 @@ name = "kw-yt-transcript"
 version = "0.1.0"
 description = "Консольная утилита для получения метаданных и транскриптов видео YouTube"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"  # >=3.11: stdlib tomllib нужен для config.py (волна 2, без новых зависимостей)
 license = { text = "MIT" }
 keywords = ["youtube", "transcript", "subtitles", "transkriptsia", "cli"]
 classifiers = [

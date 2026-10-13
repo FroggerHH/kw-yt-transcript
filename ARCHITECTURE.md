@@ -41,3 +41,29 @@ tests/           — stubs yt-dlp/transcript/whisper, без сети (M5: XDG t
 - **report.py** — `render_report(meta, segments, stats, origin)` (один HTML: meta charset, встроенные style/script, главы `youtu.be/{id}?t=`, реплики `watch?v={id}&t={s}s`, поиск с подсветкой, escape) и `render_index(entries_info, corpus)` (таблица + сводка). Всё на русском.
 - **outputs.py** — `write_video` всегда пишет `report.html` + `stats` в `meta.json`; `write_index` всегда пишет `index.html` рядом с `index.json` (ссылки `dir/report.html`). 5 форматов не менялись.
 - **formats.py `to_md`** — в шапку добавлены строки слов/времени чтения/топ-3 (сигнатура та же).
+
+## v0.2 Волна 2 (поиск + serve + скорость, аддитивно)
+- **Субкоманды:** `cli.main` смотрит на argv[1]: `search`/`serve` — свои парсеры
+  (`build_search_parser`/`build_serve_parser`), иначе старое fetch-поведение
+  (`build_parser` + `--jobs`/`--resume`). Fetch-примеры и флаги не менялись.
+- **search.py** — `search_corpus(root, query, context_sec=15, limit=20)`:
+  читает `*/transcript.json` (+title из `meta.json`), case-insensitive подстрока,
+  контекст — соседние реплики в ±секундах, сортировка видео по числу прямых
+  вхождений (desc), лимит — по числу видео. CLI: группы «заголовок + mm:ss»,
+  exit 0/1 (нашёл/нет).
+- **serve.py** — `make_server(root, port=0)` (ThreadingHTTPServer на 127.0.0.1,
+  stdlib) + `serve_dir` (печать URL в stdout, Ctrl+C — чистый выход).
+  CLI: `kw-yt serve [DIR] [--port N]` (0 — авто).
+- **Скорость batch:** `--jobs N` (default 4, 1–16, иначе exit 2) —
+  ThreadPoolExecutor, порядок слотов = порядок входов (index стабилен),
+  прогресс в stderr под Lock. `--resume` — пропуск готовых через
+  `outputs.find_ready(out_dir, video_id)` (glob `*_<video_id>` + meta.json,
+  запись «skip», сеть не вызывается).
+- **cache.py** — кэш метаданных `XDG_CACHE_HOME/kw-yt/{id}.json`
+  (fallback `~/.cache`), `{saved_at, ttl=86400, meta}`; просрочка/ошибки — тихий
+  miss; атомарная запись. `metadata.get_metadata` смотрит в кэш до сети.
+- **config.py** — `load_config()` читает `XDG_CONFIG_HOME/kw-yt/config.toml`
+  (fallback `~/.config`), stdlib tomllib, секция `[tool.defaults]` (также
+  `[defaults]`/корень): langs (строка), out, jobs (int), whisper_model;
+  отсутствие/битый — дефолты + предупреждение в stderr. Приоритет:
+  CLI-флаги > конфиг > дефолты. `requires-python >=3.11` ради tomllib.

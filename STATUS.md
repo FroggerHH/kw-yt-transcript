@@ -3,8 +3,9 @@
 ## v0.2 (старт 14:31 MSK 2026-10-13, дедлайн 17:31 MSK — требование пользователя: больше функционала)
 - Причина: пользователь счёл v0.1 минимальной. Scope v0.2 в SPEC.md (HTML, статистика, search, serve, jobs/resume/cache/config).
 - [x] Волна 1 (fix-2, 14:34): stats.py + report.py + outputs (report.html/index.html/stats в meta). Gates: 116 passed, --help exit 0.
-- [ ] Волна 2 (fix-2 reuse, background): search.py + serve.py + cli (subcommands, --jobs, --resume, кэш TTL, конфиг). Acceptance: pytest, serve 200, --resume без сети.
-- Next: волна 3 (review + 0.2.0 + live) → волна 4 если время до 17:31 осталось.
+- [x] Волна 2 (fix-2): search.py + serve.py + cli (subcommands, --jobs, --resume, кэш TTL, конфиг). Gates: 147 passed, serve 200 (тест), --resume без сети (тест), live search 57 хитов exit 0.
+- [ ] Волна 3 (oracle review волн 1–2 → fixer fixes + README v0.2 + 0.2.0 + live). Замечание: warning отсутствующего конфига → только о битом.
+- Next: волна 4 (экспорт jsonl/csv, completion, thumbnails) если время до 17:31 осталось.
 
 ---
 

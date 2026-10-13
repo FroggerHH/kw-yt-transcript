@@ -21,6 +21,9 @@ class MetadataError(Exception):
     """Не удалось получить метаданные видео."""
 
 
+from kw_yt_transcript import cache as cache_mod
+
+
 def _default_ydl_factory(opts: dict[str, Any]):
     try:
         import yt_dlp
@@ -67,6 +70,12 @@ def get_metadata(
     factory = ydl_factory or _default_ydl_factory
     url = _to_url(url_or_id)
     try:
+        hit = cache_mod.cache_get(url_or_id)
+    except Exception:
+        hit = None
+    if isinstance(hit, dict) and hit.get("video_id"):
+        return hit
+    try:
         with factory(dict(_DEFAULT_OPTS)) as ydl:
             info = ydl.extract_info(url, download=False)
             sanitize = getattr(ydl, "sanitize_info", lambda x: x)
@@ -85,7 +94,7 @@ def get_metadata(
         )
 
     video_id = info.get("id")
-    return {
+    result = {
         "video_id": video_id,
         "url": info.get("webpage_url") or url,
         "title": info.get("title"),
@@ -104,3 +113,8 @@ def get_metadata(
         "subtitles_keys": list(info.get("subtitles") or {}),
         "automatic_captions_keys": list(info.get("automatic_captions") or {}),
     }
+    try:
+        cache_mod.cache_set(url_or_id, result)
+    except Exception:
+        pass
+    return result

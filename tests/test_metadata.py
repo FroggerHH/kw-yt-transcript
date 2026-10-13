@@ -11,6 +11,12 @@ from kw_yt_transcript.metadata import MetadataError, get_metadata
 FIXTURES = Path(__file__).parent / "fixtures"
 
 
+@pytest.fixture(autouse=True)
+def _isolated_cache(tmp_path, monkeypatch):
+    """Кэш metadata не должен трогать реальный ~/.cache (изоляция без сети)."""
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))
+
+
 def load_info():
     return json.loads((FIXTURES / "info.json").read_text(encoding="utf-8"))
 

@@ -7,11 +7,12 @@
 - [x] outputs write_video → +report.html +stats в meta.json; write_index → +index.html; MD-шапка со статистикой
 - [x] Gates: pytest 116 зелёный, --help exit 0 (stale test_format_filter починен оркестратором)
 
-## Волна 2: Поиск + serve + скорость [ ] (после волны 1)
-- [ ] search.py (`kw-yt search <q> --in --context`, ранжирование, exit 0/1) + tests
-- [ ] serve.py (`kw-yt serve DIR [--port]`, stdlib http) + tests (200 на index)
-- [ ] cli: subcommands search/serve, --jobs N (порядок index стабильный), --resume, кэш метаданных TTL, конфиг ~/.config/kw-yt/config.toml
-- [ ] Gates: pytest, serve 200 локально, --resume без сети (тест со счётчиком)
+## Волна 2: Поиск + serve + скорость [x] (done, 147 passed)
+- [x] search.py (`kw-yt search <q> --in --context`, ранжирование, exit 0/1) + tests — live: 57 хитов по корпусу
+- [x] serve.py (`kw-yt serve DIR [--port]`, stdlib http) + tests (200 на index)
+- [x] cli: subcommands search/serve, --jobs N (порядок стабильный), --resume, кэш метаданных TTL, конфиг ~/.config/kw-yt/config.toml
+- [x] Gates: pytest 147, serve 200 локально (тест), --resume без сети (тест)
+- [ ] Замечание оркестратора в волну 3: warning «конфиг не найден» шумит каждый запуск → молчать при отсутствии, предупреждать только о битом
 
 ## Волна 3: Релиз 0.2.0 [ ] (после волны 2)
 - [ ] Oracle-review diff, фикс findings, README v0.2, версия 0.2.0, CHANGELOG
