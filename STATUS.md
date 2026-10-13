@@ -14,7 +14,8 @@
 - [x] Gates: pytest 169, ruff clean, export --help exit 0; live: 1 видео/61 реплика/487 слов, summary ok
 - [x] Финал review волн 4–5 (ora-3): fix-list без блокеров отработан (CHANGELOG, completion-export, exit-коды, валидация сегментов, atomic, ARCH-limitation, docstring/EXAMPLES, SPEC 12–13 + acceptance). Gates: 170 passed, ruff clean.
 - [x] Волна 6 (оркестратор): `kw-yt stats` (summarize + таблица/JSON, exit 0/1/2). Gates: 173 passed, ruff clean, live таблица+JSON ok.
-- [ ] Волна 7: thumbnails в report.html (скачивание + embed). Затем done v0.2.
+- [x] Волна 7 (оркестратор): thumbnails (fetch best-effort + <img> в report). Gates: 176 passed, ruff clean, live thumbnail.jpg + meta + report exit 0. Фикстура вычищена от URL (M5).
+- [ ] Done v0.2: коммит волны 7, финальные gates, отчёт.
 
 ---
 

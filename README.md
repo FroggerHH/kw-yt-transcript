@@ -177,6 +177,7 @@ out/
   index.html                        # тот же список таблицей + сводка корпуса
   testovoe-video_dQw4w9WgXcQ/       # <slug>_<video_id>/
     meta.json                       # метаданные + origin + stats
+    thumbnail.jpg                   # обложка (best-effort: если не скачалась — её нет, остальное пишется)
     report.html                     # отчёт: статистика, главы, кликабельные таймкоды, поиск
     transcript.srt                  # таймкоды HH:MM:SS,mmm
     transcript.vtt                  # таймкоды HH:MM:SS.mmm

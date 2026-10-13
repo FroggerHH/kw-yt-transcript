@@ -18,6 +18,9 @@ def meta():
     # Фикстура — в форме сырого yt-dlp info; приводим к форме get_metadata().
     info = load("info.json")
     info["video_id"] = info.pop("id")
+    # Скачивание обложек тестируется отдельно stub-opener'ом; здесь URL
+    # вычищаем, чтобы тесты оставались без сети (M5).
+    info.pop("thumbnails", None)
     return info
 
 
@@ -201,3 +204,59 @@ def test_md_header_has_stats(tmp_path):
 
     out = to_md(segments(), {**meta(), "origin": "manual"})
     assert "Слов:" in out and "Время чтения:" in out and "Ключевые слова:" in out
+
+
+def _meta_with_thumbs():
+    return {
+        **meta(),
+        "thumbnails": [
+            {"url": "https://i.ytimg.com/small.jpg", "width": 120},
+            {"url": "https://i.ytimg.com/big.jpg", "width": 1280},
+            {"url": "", "width": 9999},
+        ],
+    }
+
+
+def test_thumbnail_downloaded_with_stub_opener(tmp_path):
+    from kw_yt_transcript.outputs import _best_thumbnail_url
+
+    assert _best_thumbnail_url(_meta_with_thumbs()["thumbnails"]) == "https://i.ytimg.com/big.jpg"
+    assert _best_thumbnail_url([]) is None
+    assert _best_thumbnail_url("мусор") is None
+    seen = {}
+
+    def opener(url, timeout):
+        seen["url"] = url
+        return b"FAKEJPEG"
+
+    paths = write_video(tmp_path, _meta_with_thumbs(), segments(), "manual", thumb_opener=opener)
+    assert seen["url"] == "https://i.ytimg.com/big.jpg"
+    assert Path(paths["thumb"]).is_file()
+    record = json.loads(Path(paths["meta"]).read_text(encoding="utf-8"))
+    assert record["thumbnail_file"] == "thumbnail.jpg"
+    body = Path(paths["report"]).read_text(encoding="utf-8")
+    assert 'src="thumbnail.jpg"' in body
+
+
+def test_thumbnail_failure_keeps_video_without_thumb(tmp_path):
+    def opener(url, timeout):
+        raise OSError("сеть упала")
+
+    paths = write_video(tmp_path, _meta_with_thumbs(), segments(), "manual", thumb_opener=opener)
+    assert "thumb" not in paths
+    record = json.loads(Path(paths["meta"]).read_text(encoding="utf-8"))
+    assert record["thumbnail_file"] is None
+    body = Path(paths["report"]).read_text(encoding="utf-8")
+    assert "thumbnail.jpg" not in body
+    assert Path(paths["srt"]).is_file()
+
+
+def test_no_thumbnails_no_download_attempt(tmp_path):
+    calls = []
+
+    def opener(url, timeout):
+        calls.append(url)
+        return b"x"
+
+    write_video(tmp_path, meta(), segments(), "manual", thumb_opener=opener)
+    assert calls == []

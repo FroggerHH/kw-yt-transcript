@@ -145,11 +145,18 @@ def render_report(
         else ""
     )
 
+    thumb = ""
+    if meta.get("thumbnail_file"):
+        thumb = (
+            '<img src="thumbnail.jpg" alt="Обложка видео" '
+            'style="max-width:100%;border-radius:8px">\n'
+        )
+
     return (
         "<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<meta charset=\"utf-8\">\n"
         f"<title>{html.escape(title, quote=True)}</title>\n"
         f"<style>{_CSS}</style>\n</head>\n<body>\n"
-        f"<header><h1>{html.escape(title, quote=False)}</h1>\n"
+        f"<header><h1>{html.escape(title, quote=False)}</h1>\n{thumb}"
         f"<p class=\"meta\">Автор: {html.escape(author, quote=False)} | "
         f"Дата: {html.escape(date, quote=False)} | "
         f"Длительность: {_mmss(duration)} | "

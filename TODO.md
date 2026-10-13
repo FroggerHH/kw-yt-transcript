@@ -30,6 +30,10 @@
 - [x] export.summarize + cli stats (--in/--json, таблица/JSON, exit 0/1/2) + tests/test_stats_cmd.py (3)
 - [x] README + SPEC п.14 + ARCH + completion + test_readme (парсер, маркеры); Gates + live (таблица и JSON ok)
 
+## Волна 7: Обложки [x] (done, 176 passed, оркестратор напрямую)
+- [x] outputs.fetch_thumbnail + _best_thumbnail_url + write_video (best-effort, thumbnail_file, paths thumb) + report <img>
+- [x] Тесты stub/fail/no-thumbs + изоляция фикстуры (URL вычищены, M5); README/ARCH/SPEC/CHANGELOG; live: thumbnail.jpg + meta + report exit 0
+
 ## Финал review волн 4–5 [x] (done 16:25, 170 passed, оркестратор напрямую)
 - [x] ora-3 fix-list: CHANGELOG волны 4–5; completion ветка export; README exit-коды; валидация сегментов → skipped; atomic-хелпер; ARCH memory-limitation; cli docstring/EXAMPLES; SPEC пп.12–13 + acceptance; тест битых сегментов
 

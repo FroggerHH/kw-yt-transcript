@@ -1,7 +1,9 @@
-"""Запись результатов, index.json (Фаза 3).
+"""Запись результатов, index.json (Фаза 3 + v0.2 Волна 7).
 
-Только локальные файлы, без сети. Частичные ошибки batch не валят:
-неуспешные видео фиксируются в index.json с текстом ошибки.
+Локальные файлы + best-effort скачивание обложки (thumbnail.jpg) по URL
+из метаданных: неудача молча пропускается (видео всё равно пишется).
+Частичные ошибки batch не валят: неуспешные видео фиксируются
+в index.json с текстом ошибки.
 """
 
 from __future__ import annotations
@@ -9,6 +11,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import urllib.request
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -115,6 +118,60 @@ def _atomic_write_text(path: Path, content: str) -> None:
         raise
 
 
+#: Лимит размера обложки: 5 МБ (защита от мусора по URL).
+_THUMB_MAX_BYTES = 5 * 1024 * 1024
+
+
+def _best_thumbnail_url(thumbnails: Any) -> str | None:
+    """Выбрать URL наибольшей обложки (по width, иначе последняя с url)."""
+    if not isinstance(thumbnails, list):
+        return None
+    best: str | None = None
+    best_w = -1
+    for t in thumbnails:
+        if not isinstance(t, dict) or not t.get("url"):
+            continue
+        try:
+            w = int(t.get("width") or 0)
+        except Exception:
+            w = 0
+        if w >= best_w:
+            best_w = w
+            best = str(t["url"])
+    return best
+
+
+def fetch_thumbnail(url: str, dest: Path, opener=None, timeout: float = 20.0) -> bool:
+    """Скачать обложку по URL в dest. Только image/*, лимит размера.
+
+    :param opener: инъекция для тестов ``(url, timeout) -> bytes``.
+    :return: True если файл записан (атомарно), иначе False (тихо).
+    """
+    try:
+        if opener is not None:
+            data = opener(url, timeout)
+        else:
+            with urllib.request.urlopen(url, timeout=timeout) as resp:
+                ctype = (resp.headers.get_content_type() if hasattr(resp, "headers") else "") or ""
+                if ctype and not ctype.startswith("image/"):
+                    return False
+                data = resp.read(_THUMB_MAX_BYTES + 1)
+        if not isinstance(data, (bytes, bytearray)) or not data:
+            return False
+        if len(data) > _THUMB_MAX_BYTES:
+            return False
+        tmp = dest.with_name(dest.name + ".tmp")
+        tmp.write_bytes(bytes(data))
+        os.replace(tmp, dest)
+        return True
+    except Exception:
+        try:
+            dest.with_name(dest.name + ".tmp").unlink(missing_ok=True)
+        except OSError:
+            pass
+        return False
+
+
 def write_video(
     out_dir: str | Path,
     meta: dict[str, Any],
@@ -123,14 +180,18 @@ def write_video(
     formats_sel: str = "all",
     transcript_lang: str | None = None,
     asr_model: str | None = None,
+    thumb_opener=None,
 ) -> dict[str, str]:
     """Записать папку ``<slug>_<video_id>/``: meta.json + файлы транскрипта.
 
     В meta.json дописываются transcript_lang, fetched_at (UTC ISO),
     tool_version и asr_model (только при origin 'whisper').
+    Обложка thumbnail.jpg качается best-effort (неудача — тихо, без неё);
+    имя фиксируется в meta.json (``thumbnail_file``).
     Все файлы пишутся атомарно (*.tmp + os.replace).
 
-    :return: словарь путей {dir, meta, report, srt?, vtt?, json?, txt?, md?} (строки).
+    :param thumb_opener: инъекция ``(url, timeout) -> bytes`` для тестов.
+    :return: словарь путей {dir, meta, report, thumb?, srt?, vtt?, json?, txt?, md?} (строки).
     """
     video_id = meta.get("video_id") or "noid"
     video_dir = Path(out_dir) / f"{slug(meta.get('title'), video_id)}_{video_id}"
@@ -153,6 +214,17 @@ def write_video(
             "speaking_wpm": None,
             "top_keywords": [],
         }
+    thumb_path: Path | None = None
+    thumb_url = _best_thumbnail_url(record.get("thumbnails"))
+    if thumb_url:
+        candidate = video_dir / "thumbnail.jpg"
+        if fetch_thumbnail(thumb_url, candidate, opener=thumb_opener):
+            record["thumbnail_file"] = "thumbnail.jpg"
+            thumb_path = candidate
+        else:
+            record["thumbnail_file"] = None
+    else:
+        record["thumbnail_file"] = None
     meta_path = video_dir / "meta.json"
     _atomic_write_text(meta_path, json.dumps(record, ensure_ascii=False, indent=2))
 
@@ -176,6 +248,8 @@ def write_video(
     report_path = video_dir / "report.html"
     _atomic_write_text(report_path, report_html)
     paths["report"] = str(report_path)
+    if thumb_path is not None:
+        paths["thumb"] = str(thumb_path)
     return paths
 
 

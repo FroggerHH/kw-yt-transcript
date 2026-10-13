@@ -110,3 +110,11 @@ tests/           — stubs yt-dlp/transcript/whisper, без сети (M5: XDG t
 - `export.summarize` (счётчики + `by_origin`/`by_lang`, длительность — спан
   сегментов) + CLI `stats` (`--in/--json`, таблица или JSON, exit 0/1/2);
   тест: таблица, JSON-разбор, пустой/нет папки.
+
+## v0.2 Волна 7 (обложки, аддитивно, оркестратор напрямую)
+- `outputs.fetch_thumbnail` (stdlib urllib, только image/*, лимит 5 МБ,
+  атомарно, `opener`-инъекция) + `_best_thumbnail_url` (max width);
+  `write_video(..., thumb_opener=None)`: best-effort, неудача — тихо
+  (`thumbnail_file: null`), `paths["thumb"]` при успехе; ready-критерий
+  не менялся (обложка опциональна).
+- `report.render_report`: `<img src="thumbnail.jpg">` при наличии файла.
