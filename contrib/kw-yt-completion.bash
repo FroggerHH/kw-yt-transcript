@@ -38,7 +38,7 @@ _kw_yt() {
             return 0
             ;;
         library)
-            COMPREPLY=( $(compgen -W "--color --help --json --no-color -h" -- "$cur") )
+            COMPREPLY=( $(compgen -W "--color --format --help --json --no-color --open --transcript --tui -h" -- "$cur") )
             return 0
             ;;
         search)

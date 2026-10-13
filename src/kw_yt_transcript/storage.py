@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 from pathlib import Path
@@ -52,8 +53,6 @@ def _dir_size_bytes(video_dir: Path) -> int:
 def _record_of(video_dir: Path) -> dict[str, Any] | None:
     """Запись библиотеки по папке ``*_<video_id>``; нет meta.json — None."""
     try:
-        import json
-
         record = json.loads((video_dir / "meta.json").read_text(encoding="utf-8"))
     except Exception:
         return None
@@ -151,3 +150,38 @@ def clear_cache() -> tuple[int, int]:
     except OSError:
         pass
     return count, freed
+
+
+def read_meta(video_dir: str | Path) -> dict[str, Any] | None:
+    """Полный meta.json папки видео; нет/бит — None."""
+    try:
+        record = json.loads((Path(video_dir) / "meta.json").read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    return record if isinstance(record, dict) else None
+
+
+def read_segments(video_dir: str | Path) -> list[Any] | None:
+    """Список сегментов transcript.json; нет/бит/не список — None."""
+    try:
+        segments = json.loads((Path(video_dir) / "transcript.json").read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    return segments if isinstance(segments, list) else None
+
+
+def list_files(video_dir: str | Path) -> list[dict[str, Any]]:
+    """Файлы папки видео [{name, size_bytes}], по имени. Нет папки — []."""
+    base = Path(video_dir)
+    out = []
+    try:
+        names = sorted(p.name for p in base.iterdir() if p.is_file())
+    except OSError:
+        return []
+    for name in names:
+        try:
+            size = (base / name).stat().st_size
+        except OSError:
+            continue
+        out.append({"name": name, "size_bytes": size})
+    return out

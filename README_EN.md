@@ -21,7 +21,7 @@ Features:
 - text stats: words, reading time, speaking rate, keywords;
 - `kw-yt search` — search saved transcripts with context;
 - `kw-yt serve` — browse the corpus in a browser (built-in HTTP server);
-- `kw-yt library` / `kw-yt clean` — own storage: list with sizes, delete videos and cache;
+- `kw-yt library` / `kw-yt clean` — own storage: navigator (numbered list, details, transcript, report), delete videos and cache;
 - fast batch: `--jobs N` in parallel, `--resume` skips finished items, metadata cache, config file.
 
 ## Requirements
@@ -339,12 +339,30 @@ Common cases:
 Without `--out` everything goes to own storage: `XDG_DATA_HOME/kw-yt/library`
 (or `~/.local/share/kw-yt/library`). Priority: `--out` flag → config `out` → library.
 
-`kw-yt library` — video list (title, id, date, size, origin):
+`kw-yt library` — navigator: numbered `[i]` list, video details, transcript, report:
+
+```bash
+kw-yt library
+# Библиотека: ... — видео 2.
+# - [1] Первое [id1] 20260115 914.5 КБ manual
+# - [2] Второе [id2] 20260115 1.1 МБ whisper
+
+kw-yt library 1                   # details: meta, files with sizes, path
+kw-yt library id2 --transcript    # readable text (or --format md/srt)
+kw-yt library 1 --open            # report.html in the browser
+kw-yt library --tui               # line-based navigator (i/t/o/q)
+```
 
 | Option | Default | What it does |
 |---|---|---|
-| `--json` | off | JSON list instead of a table |
+| `N\|id` | — | `[i]` number from the list or video id — single-video details |
+| `--json` | off | JSON instead of text (list with `index`, or details) |
+| `--transcript` | off | video transcript (`--format txt/md/srt`, default txt) |
+| `--open` | off | open `report.html` in the browser (missing file — exit 1) |
+| `--tui` | off | line-based UI (not a fullscreen TUI); conflicts with everything (exit 2) |
 
+Single-video priority: `--json` > `--transcript` > `--open` > details.
+N out of range / unknown id / missing `transcript.json`/`report.html` — Russian error, exit 1.
 Empty library — Russian hint line, exit 0.
 
 `kw-yt clean` — delete from the library:

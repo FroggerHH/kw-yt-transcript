@@ -151,3 +151,21 @@ def test_clean_cache(monkeypatch, tmp_path, capsys):
     assert cli_mod.main(["clean", "--cache"]) == 0
     assert cache_mod.cache_get("dQw4w9WgXcQ") is None
     assert "кэш" in capsys.readouterr().out.lower()
+
+
+def test_read_meta_segments_edge_cases(tmp_path):
+    d = tmp_path / "v_id9"
+    d.mkdir()
+    (d / "meta.json").write_text("[1, 2]", encoding="utf-8")
+    assert storage_mod.read_meta(d) is None
+    (d / "meta.json").write_text("{битый", encoding="utf-8")
+    assert storage_mod.read_meta(d) is None
+    (d / "transcript.json").write_text('{"a": 1}', encoding="utf-8")
+    assert storage_mod.read_segments(d) is None
+    (d / "transcript.json").write_text("[]", encoding="utf-8")
+    assert storage_mod.read_segments(d) == []
+    assert [f["name"] for f in storage_mod.list_files(d)] == [
+        "meta.json",
+        "transcript.json",
+    ]
+    assert all(f["size_bytes"] > 0 for f in storage_mod.list_files(d))

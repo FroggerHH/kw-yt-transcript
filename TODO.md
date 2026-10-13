@@ -173,6 +173,10 @@
 - [x] serve_dir(root, port, host=127.0.0.1); cli --host (getaddrinfo-валидация, exit 2); не-loopback → LAN-предупреждение
 - [x] tests +5 (бинд 0.0.0.0, warning, мусор/пусто, passthrough); README(EN)/completion/demo/ARCH; Gates + live smoke 200
 
+## Волна 27: Библиотека-навигатор [x] (done, 292 passed, fix-4)
+- [ ] library: нумерованный список `- [N] Title [id] DATE SIZE origin` (детерминированный порядок); `library <N|id>` — детали; `--transcript` (читаемый текст); `--tui` (интерактивное меню: выбор → info/transcript/open/quit, без curses); `--open` (report.html в браузере); `--json` на список и детали
+- [ ] tests: номера/детали/транскрипт/tui-стабы stdin/--open (мок webbrowser)/--json; README(EN)/completion/ARCH; Gates: pytest зелёный, ruff чисто
+
 ## Волна 26: kw-yt update [x] (done 18:28, 276 passed, fix-4)
 - [x] update.py (детект pipx/uv-tool/source/pip/unknown, версия с GitHub, runner-инъекция); cli update --check; 25 тестов
 - [x] README(EN)/completion/demo/ARCH; Gates + live --check (source, 0.2.0, свежее)

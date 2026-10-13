@@ -1,10 +1,25 @@
-usage: kw-yt library [-h] [--json] [--color {auto,always,never}] [--no-color]
+usage: kw-yt library [-h] [--json] [--transcript] [--format {txt,md,srt}]
+                     [--open] [--tui] [--color {auto,always,never}]
+                     [--no-color]
+                     [target]
 
-Список библиотеки: видео с размерами и источниками.
+Навигатор библиотеки: список, детали видео, транскрипт, report.
+
+positional arguments:
+  target                Номер [i] из списка или video id — детали одного
+                        видео.
 
 options:
   -h, --help            show this help message and exit
-  --json                Вывести список JSON вместо таблицы.
+  --json                Вывести JSON вместо текста (список или детали одного
+                        видео).
+  --transcript          Напечатать транскрипт видео (формат — --format, по
+                        умолчанию txt).
+  --format {txt,md,srt}
+                        Формат транскрипта с --transcript (по умолчанию txt).
+  --open                Открыть report.html видео в браузере.
+  --tui                 Простой построчный интерфейс-навигатор (не
+                        полноэкранный TUI).
   --color {auto,always,never}
                         Цвета в выводе: auto (по TTY), always, never (по
                         умолчанию auto).

@@ -19,6 +19,7 @@ import re
 import socket
 import sys
 import threading
+import webbrowser
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any
@@ -26,13 +27,16 @@ from typing import Any
 from kw_yt_transcript import __version__, asr, metadata, outputs, transcript
 from kw_yt_transcript import config as config_mod
 from kw_yt_transcript import export as export_mod
+from kw_yt_transcript import formats as formats_mod
 from kw_yt_transcript import search as search_mod
 from kw_yt_transcript import sections as sections_mod
 from kw_yt_transcript import serve as serve_mod
+from kw_yt_transcript import stats as stats_mod
 from kw_yt_transcript import storage as storage_mod
 from kw_yt_transcript import update as update_mod
 from kw_yt_transcript.inputs import parse_inputs_with_errors
 from kw_yt_transcript.metadata import MetadataError
+from kw_yt_transcript.timefmt import mmss as _mmss
 from kw_yt_transcript.transcript import NoTranscriptError
 
 #: Языки --langs после нормализации: латиница/дефис, 2–12 символов.
@@ -417,13 +421,40 @@ def build_stats_parser() -> argparse.ArgumentParser:
 def build_library_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="kw-yt library",
-        description="Список библиотеки: видео с размерами и источниками.",
+        description="Навигатор библиотеки: список, детали видео, транскрипт, report.",
         formatter_class=_ColorHelpFormatter,
+    )
+    p.add_argument(
+        "target",
+        nargs="?",
+        default=None,
+        help="Номер [i] из списка или video id — детали одного видео.",
     )
     p.add_argument(
         "--json",
         action="store_true",
-        help="Вывести список JSON вместо таблицы.",
+        help="Вывести JSON вместо текста (список или детали одного видео).",
+    )
+    p.add_argument(
+        "--transcript",
+        action="store_true",
+        help="Напечатать транскрипт видео (формат — --format, по умолчанию txt).",
+    )
+    p.add_argument(
+        "--format",
+        choices=["txt", "md", "srt"],
+        default="txt",
+        help="Формат транскрипта с --transcript (по умолчанию txt).",
+    )
+    p.add_argument(
+        "--open",
+        action="store_true",
+        help="Открыть report.html видео в браузере.",
+    )
+    p.add_argument(
+        "--tui",
+        action="store_true",
+        help="Простой построчный интерфейс-навигатор (не полноэкранный TUI).",
     )
     _add_color_args(p)
     return p
@@ -1197,27 +1228,261 @@ def _fmt_size(num_bytes: int) -> str:
     return f"{n / (1024 * 1024):.1f} МБ"
 
 
-def _main_library(argv: list[str]) -> int:
-    """Список библиотеки: таблица или JSON, exit 0 (пустая — строка, тоже 0)."""
-    _init_color(argv)
-    args = build_library_parser().parse_args(argv[1:])
-    cfg = config_mod.load_config()
-    root = storage_mod.resolve_root(None, cfg)
+def _library_entries(root: Path) -> list[dict[str, Any]]:
+    """Записи библиотеки с index (с 1, порядок — по имени папки)."""
     entries = storage_mod.iter_library(root)
-    if args.json:
-        print(json.dumps(entries, ensure_ascii=False, indent=2))
-        return 0
-    if not entries:
-        print(f"Библиотека пуста: {root}. Скачайте видео: kw-yt <URL> (без --out).")
-        return 0
+    for i, e in enumerate(entries, 1):
+        e["index"] = i
+    return entries
+
+
+def _print_library_list(root: Path, entries: list[dict[str, Any]]) -> None:
     print(f"Библиотека: {root} — видео {len(entries)}.")
     for e in entries:
         title = e.get("title") or e.get("video_id") or "—"
         print(
-            f"- {title} [{e.get('video_id') or '—'}] "
+            f"- [{e['index']}] {title} [{e.get('video_id') or '—'}] "
             f"{e.get('date') or '—'} {_fmt_size(e.get('size_bytes', 0))} "
             f"{e.get('origin') or '—'}"
         )
+
+
+def _list_json(entry: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "index": entry.get("index"),
+        "video_id": entry.get("video_id"),
+        "title": entry.get("title"),
+        "date": entry.get("date"),
+        "size_bytes": entry.get("size_bytes"),
+        "origin": entry.get("origin"),
+        "dir": entry.get("dir"),
+    }
+
+
+def _resolve_target(
+    root: Path, entries: list[dict[str, Any]], target: str
+) -> tuple[dict[str, Any], Path] | None:
+    """(entry, папка) по номеру [i] (цифры) или video id. Нет — None."""
+    if target.isdigit():
+        for e in entries:
+            if e.get("index") == int(target):
+                return e, root / e["dir"]
+        return None
+    found, _ = storage_mod.find_video_dirs(root, [target])
+    if not found:
+        return None
+    for e in entries:
+        if e.get("dir") == found[0].name:
+            return e, found[0]
+    return None
+
+
+def _video_stats(meta: dict[str, Any], segments: list[Any]) -> tuple[int, float]:
+    """(слов, минут): из meta.stats, иначе посчитать по сегментам."""
+    stats = meta.get("stats")
+    if isinstance(stats, dict) and isinstance(stats.get("words"), (int, float)):
+        try:
+            minutes = round(float(stats.get("reading_time_min", 0.0)), 1)
+        except (TypeError, ValueError):
+            minutes = 0.0
+        return int(stats["words"]), minutes
+    if segments:
+        try:
+            comp = stats_mod.compute_stats(segments, meta.get("duration"))
+            return int(comp.get("words", 0)), round(float(comp.get("reading_time_min", 0.0)), 1)
+        except Exception:
+            pass
+    return 0, 0.0
+
+
+def _detail_object(
+    entry: dict[str, Any], video_dir: Path, meta: dict[str, Any], segments: list[Any]
+) -> dict[str, Any]:
+    """Всё для деталей: мета + слова/минуты + файлы."""
+    words, minutes = _video_stats(meta, segments)
+    return {
+        "index": entry.get("index"),
+        "video_id": entry.get("video_id"),
+        "title": entry.get("title"),
+        "url": meta.get("url"),
+        "author": meta.get("channel") or meta.get("author"),
+        "date": entry.get("date"),
+        "duration_sec": meta.get("duration"),
+        "origin": entry.get("origin"),
+        "transcript_lang": meta.get("transcript_lang"),
+        "words": words,
+        "minutes": minutes,
+        "files": storage_mod.list_files(video_dir),
+        "dir": entry.get("dir"),
+        "path": str(video_dir),
+    }
+
+
+def _print_details(detail: dict[str, Any]) -> None:
+    dur = detail.get("duration_sec")
+    dur_s = f"{dur} с ({_mmss(dur)})" if isinstance(dur, (int, float)) else "—"
+    print(f"{detail.get('title') or '—'}")
+    print(f"  id: {detail.get('video_id') or '—'}")
+    print(f"  url: {detail.get('url') or '—'}")
+    print(f"  Автор: {detail.get('author') or '—'}")
+    print(f"  Дата: {detail.get('date') or '—'}")
+    print(f"  Длительность: {dur_s}")
+    print(
+        f"  Источник: {detail.get('origin') or '—'} | Язык: {detail.get('transcript_lang') or '—'}"
+    )
+    print(f"  Слов: {detail.get('words')} | Минут: {detail.get('minutes')}")
+    print("  Файлы:")
+    for f in detail.get("files") or []:
+        print(f"    - {f.get('name')} — {_fmt_size(f.get('size_bytes', 0))}")
+    print(f"  Папка: {detail.get('path')}")
+
+
+def _print_transcript(video_dir: Path, fmt: str) -> int:
+    """Транскрипт через formats.to_* (txt/md/srt). Нет файла — exit 1."""
+    segments = storage_mod.read_segments(video_dir)
+    if segments is None:
+        _error(f"нет transcript.json в {video_dir.name}.")
+        return 1
+    meta = storage_mod.read_meta(video_dir) or {}
+    if fmt == "md":
+        text = formats_mod.to_md(segments, meta)
+    elif fmt == "srt":
+        text = formats_mod.to_srt(segments, meta)
+    else:
+        text = formats_mod.to_txt(segments, meta)
+    if text:
+        print(text)
+    return 0
+
+
+def _open_report(report_path: str | Path, opener=None) -> bool:
+    """Открыть report.html в браузере (opener-инъекция для тестов)."""
+    if not Path(report_path).is_file():
+        return False
+    (opener if opener is not None else webbrowser.open)(f"file://{Path(report_path)}")
+    return True
+
+
+def _tui_ask(prompt: str = "") -> str | None:
+    """Ввод построчного навигатора: пусто/EOF — None (выход)."""
+    try:
+        text = input(prompt)
+    except EOFError:
+        return None
+    return text if text.strip() else None
+
+
+def _tui_actions(root: Path, entry: dict[str, Any], opener, ask) -> int:
+    """Меню действий видео: 0 — выйти, 1 — назад к списку."""
+    video_dir = root / entry["dir"]
+    while True:
+        act = ask(f"[{entry['index']}] [i]нфо / [t]ранскрипт / [o]ткрыть report / [q]выход: ")
+        if act is None:
+            return 0
+        act = act.strip().lower()
+        if act in ("q", "й"):
+            return 0
+        if act in ("i", "и", "ш"):
+            _print_details(
+                _detail_object(
+                    entry,
+                    video_dir,
+                    storage_mod.read_meta(video_dir) or {},
+                    storage_mod.read_segments(video_dir) or [],
+                )
+            )
+        elif act in ("t", "т", "е"):
+            code = _print_transcript(video_dir, "txt")
+            if code != 0:
+                continue
+        elif act in ("o", "о", "щ"):
+            if not _open_report(video_dir / "report.html", opener):
+                _error(f"нет report.html в {video_dir.name}.")
+        else:
+            print(f"Непонятно {act!r}: нужно i / t / o / q.")
+            continue
+        return 1
+
+
+def run_tui(root: Path, entries: list[dict[str, Any]], opener=None, ask=None) -> int:
+    """Простой построчный навигатор (не полноэкранный TUI). Пусто/EOF — выход 0."""
+    ask = ask if ask is not None else _tui_ask
+    by_num = {str(e["index"]): e for e in entries}
+    while True:
+        _print_library_list(root, entries)
+        choice = ask("Номер видео (пусто — выход): ")
+        if choice is None:
+            return 0
+        entry = by_num.get(choice.strip())
+        if entry is None:
+            print(f"Нет видео с номером {choice.strip()!r}.")
+            continue
+        if _tui_actions(root, entry, opener, ask) == 0:
+            return 0
+
+
+def _main_library(argv: list[str]) -> int:
+    """Навигатор библиотеки: список / детали / транскрипт / report. Exit 0/1/2.
+
+    Приоритет одного видео: --json > --transcript > --open > детали.
+    --tui ни с чем не сочетается (exit 2).
+    """
+    _init_color(argv)
+    args = build_library_parser().parse_args(argv[1:])
+    cfg = config_mod.load_config()
+    root = storage_mod.resolve_root(None, cfg)
+    entries = _library_entries(root)
+    if args.tui:
+        if (
+            args.target is not None
+            or args.json
+            or args.transcript
+            or args.open
+            or args.format != "txt"
+        ):
+            _error("--tui не сочетается с номером и флагами вывода (режим — отдельно).")
+            return 2
+        if not entries:
+            print(f"Библиотека пуста: {root}. Скачайте видео: kw-yt <URL> (без --out).")
+            return 0
+        return run_tui(root, entries)
+    if args.target is None:
+        if args.json:
+            print(json.dumps([_list_json(e) for e in entries], ensure_ascii=False, indent=2))
+            return 0
+        if not entries:
+            print(f"Библиотека пуста: {root}. Скачайте видео: kw-yt <URL> (без --out).")
+            return 0
+        _print_library_list(root, entries)
+        return 0
+    resolved = _resolve_target(root, entries, args.target)
+    if resolved is None:
+        if args.target.isdigit():
+            _error(f"нет видео с номером {args.target}: в библиотеке {len(entries)}.")
+        else:
+            _error(f"видео {args.target!r} нет в библиотеке.")
+        return 1
+    entry, video_dir = resolved
+    meta = storage_mod.read_meta(video_dir) or {}
+    segments = storage_mod.read_segments(video_dir) or []
+    if args.json:
+        print(
+            json.dumps(
+                _detail_object(entry, video_dir, meta, segments),
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
+        return 0
+    if args.transcript:
+        return _print_transcript(video_dir, args.format)
+    if args.open:
+        if not _open_report(video_dir / "report.html"):
+            _error(f"нет report.html в {video_dir.name}.")
+            return 1
+        print(f"Открываю {video_dir.name}/report.html в браузере.")
+        return 0
+    _print_details(_detail_object(entry, video_dir, meta, segments))
     return 0
 
 

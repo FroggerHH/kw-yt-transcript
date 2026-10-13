@@ -211,3 +211,13 @@ tests/           — stubs yt-dlp/transcript/whisper, без сети (M5: XDG t
   полный — уже свежее 0, обновлено 0, ошибка 1. Сеть только в remote_version.
 - Безопасность: никаких скачиваний бинарей, кроме официальных каналов
   (pipx/uv/pip из git-источника, git pull из своего репо).
+
+## v0.2 Волна 27 (library-навигатор, аддитивно)
+- Список: `- [i] …` (index с 1, порядок по имени папки), `--json` с `index`.
+- `library <N|id>`: цифры — номер, иначе video id; детали (мета/файлы/путь),
+  `--transcript` (formats.to_txt/md/srt, дефолт txt), `--open` (webbrowser,
+  opener-инъекция), `--json` — тот же объект. Приоритет:
+  `--json` > `--transcript` > `--open` > детали; `--tui` ни с чем — exit 2.
+- `--tui`: построчный навигатор на input()/print (не curses/не полноэкранный),
+  действия i/t/o/q (+кириллические equivalents), пусто/EOF — выход 0.
+- storage.py: `read_meta`/`read_segments`/`list_files` (нет/битые — None/[]).

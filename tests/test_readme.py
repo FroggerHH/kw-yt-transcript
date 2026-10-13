@@ -74,6 +74,8 @@ def test_readme_required_sections():
         "kw-yt export",
         "kw-yt stats",
         "kw-yt library",
+        "--transcript",
+        "--tui",
         "kw-yt clean",
         "--from",
         "--to",
@@ -189,6 +191,8 @@ def test_readme_en_exists_and_matches():
         "--color",
         "completion",
         "--host",
+        "--transcript",
+        "--tui",
         "docs/demo/",
         "SKILL.md",
     ):
