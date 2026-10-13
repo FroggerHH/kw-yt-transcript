@@ -12,10 +12,9 @@ jobs:
         python-version: ["3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: astral-sh/setup-uv@v6
         with:
           python-version: ${{ matrix.python-version }}
-      - run: pip install -e .
-      - run: pip install pytest
-      - run: python -m pytest -q
-      - run: pip install ruff && ruff check kw_yt_transcript tests
+      - run: uv sync --locked
+      - run: uv run --no-project --with pytest -- python -m pytest -q
+      - run: uvx ruff check kw_yt_transcript tests

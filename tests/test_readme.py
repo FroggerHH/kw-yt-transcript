@@ -36,6 +36,8 @@ def test_readme_required_sections():
         "Ошибки и коды выхода",
         "pipx install",
         "uv tool install",
+        "uv sync",
+        "uv run",
         "pip install -e",
         "[asr]",
         "--from-file",

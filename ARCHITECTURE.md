@@ -4,6 +4,7 @@
 - **Выбор:** Python 3.11+ (в системе 3.14.7), `pipx`/`uv` установка, entry point `kw-yt`.
 - **Runner-up:** Node/Bun-CLI + `youtube-transcript-plus@2.0.0` — отклонён: npm-пакет Node-only, нет плейлистов, метаданные всё равно через yt-dlp (Python-embedding зрелее), Whisper-экосистема Python stronger. Детали в `DECISIONS.md`.
 - **Зависимости (pin в pyproject):** `yt-dlp>=2026.8.19`, `youtube-transcript-api==1.2.4`, `faster-whisper==1.2.1` (опциональный extra `asr`), stdlib остальное (argparse, json, re, pathlib).
+- **Packaging:** `uv` основной (`uv.lock` в коммите, `uv sync --locked`, dev на 3.14 через `.python-version`, CI на `setup-uv`); `pip`/`pipx`-путь сохранён как альтернатива, `requires-python >=3.11`.
 
 ## Слои
 ```

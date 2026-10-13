@@ -21,8 +21,8 @@
 - [ ] Wiki-remote not found (провиженинг): 7 страниц готовы локально, повтор перед done.
 - [ ] Волны 12 (CI) + 13 (AI-warning) → fixer; затем done + отчёт.
 - [x] Волны 12 (CI: push/PR, matrix 3.11–3.13, pytest+ruff, бейдж) + 13 (AI-warning: README-плашка, баннер report, строки md/txt) (fix-3). Gates: 188 passed + 2 skipped, ruff clean, YAML валиден.
-- [ ] Волна 14 (fixer): uv-миграция (uv.lock + README + CI на setup-uv). Затем wiki-пуш, done + отчёт.
-- [ ] Волна 14 (queued, ПОСЛЕ волны 12): миграция pip → uv (uv.lock + README + CI на setup-uv).
+- [x] Волна 14 (fix-3): uv-миграция (uv.lock 35 пакетов, .python-version 3.14, CI setup-uv, README uv-first). Gates: sync чисто, 188 passed, ruff clean.
+- [ ] Волна 15 (fixer): README_EN.md + шапки-ссылки + тесты. Затем волна 16, wiki-пуш, done + отчёт.
 - [ ] Live batch (2 видео, --jobs 2, --resume повтор) + Whisper-tiny на реальном аудио. Затем done + отчёт.
 - [x] Done v0.2 (16:34 MSK, до дедлайна 17:31): коммит ниже, дерево чистое. Live-доказательства: single→9 файлов exit 0, report.html 33 ссылки, search 38–57 хитов, serve 200, export 61/487, stats таблица+JSON, thumbnail.jpg.
 - [x] Волна 6 (оркестратор): `kw-yt stats` (summarize + таблица/JSON, exit 0/1/2). Gates: 173 passed, ruff clean, live таблица+JSON ok.

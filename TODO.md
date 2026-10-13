@@ -66,16 +66,17 @@
 - [x] README-плашка (проект + auto/whisper); report.html жёлтый баннер (auto/whisper only); md/txt строки
 - [x] Тесты ×3 origin + маркер «распознан ИИ»
 
-## Волна 13: AI-generated warning [ ] (queued, после ASR-fallback)
-- [ ] README: плашка «проект разработан при участии ИИ; субтитры auto/whisper распознаны ИИ — возможны ошибки»
-- [ ] report.html: баннер «⚠ текст распознан ИИ, возможны ошибки» при origin auto/whisper (manual — без баннера)
-- [ ] transcript.md/txt: строка-предупреждение в шапку при auto/whisper; meta.json уже имеет origin
-- [ ] Тесты баннера ×3 origin + test_readme-маркер; Gates: pytest зелёный
+## Волна 14: Миграция на uv [x] (done 16:58, 188 passed, fix-3)
+- [x] uv.lock (35 пакетов) + .python-version 3.14; CI на setup-uv (matrix 3.11–3.13); README uv-first, pip — альтернатива
+- [x] Gates: `uv sync --locked` чисто, pytest 188, ruff чисто; статус — только разрешённые файлы
 
-## Волна 14: Миграция на uv [ ] (queued, ПОСЛЕ волны 12 — правит её workflow)
-- [ ] Факт: проект на pip (pyproject без [tool.uv], нет uv.lock) → мигрировать по условию пользователя
-- [ ] `uv lock` в репо + проверка `uv sync --locked`; README: установка/запуск через uv (sync/run/tool); CI wave-12 перевести на astral-sh/setup-uv
-- [ ] Gates: `uv sync --locked` чисто с нуля, pytest через `uv run --no-project` зелёный (или `uv run --locked`)
+## Волна 15: Multilanguage README [ ] (queued, ПОСЛЕ волны 14 — обе правят README)
+- [ ] README_EN.md — полный английский перевод 1:1; RU основной; языковые шапки-ссылки в обоих
+- [ ] test_readme: EN существует + ключевые секции + та же версия; Gates: pytest зелёный
+
+## Волна 16: Rich README [ ] (queued, ПОСЛЕ волн 14–15 — правит README)
+- [ ] Бейджи (CI, версия, Python, лицензия), оглавление, highlights, скриншот-описание report.html, демо-сессия, FAQ; без битых ссылок/флагов (тест флагов должен остаться зелёным)
+- [ ] Gates: pytest зелёный (маркеры), `grep` битых якорей
 
 ## Волна 4: Экспорт + completion [x] (done 16:18, 163 passed, оркестратор напрямую)
 - [x] formats jsonl/csv (+реестр FORMATS, filenames, --format choices), тесты round-trip/quoting/empty/header

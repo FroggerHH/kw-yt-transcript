@@ -31,18 +31,22 @@
 ## Установка
 
 ```bash
-# pipx (рекомендуется для CLI)
-pipx install .
+# uv (рекомендуется): клонирование → детерминированное окружение → запуск
+git clone https://github.com/FroggerHH/kw-yt-transcript && cd kw-yt-transcript
+uv sync                  # зависимости по uv.lock
+uv run kw-yt --help      # запуск без установки
 
-# uv
+# uv как CLI-утилита
 uv tool install .
 
-# pip, editable для разработки
-pip install -e .
+# Альтернативы без uv
+pipx install .         # CLI через pipx
+pip install -e .       # pip, editable для разработки
 
 # Whisper-fallback (распознавание речи, если субтитров нет)
 pipx install ".[asr]"
 # или: pip install -e ".[asr]"
+```
 ```
 
 > Если на Python 3.14 faster-whisper падает с `TypeError: ... metadata_errors ...`
@@ -245,6 +249,8 @@ kw-yt serve /tmp/kw-live --port 8000            # http://127.0.0.1:8000, вых�
 ## Разработка
 
 ```bash
-python -m pytest -q          # все тесты (без сети: stubs + tmp_path + tests/fixtures)
+uv sync                                            # окружение по uv.lock
+uv run --no-project --with pytest -- python -m pytest -q -p no:cacheprovider
+uvx ruff check kw_yt_transcript tests              # линт (select E/F/W/I/UP в pyproject)
 python -m kw_yt_transcript --help
 ```
