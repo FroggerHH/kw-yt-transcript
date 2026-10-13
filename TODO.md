@@ -50,6 +50,10 @@
 ## Волна 10: CHANGELOG [x] (done, 181 passed, fix-3)
 - [x] Запись 0.2.0: волны 8–9 + review-циклы, счётчик 181; grep «Волна» = 9
 
+## Финал v0.2: свежий venv + live [x] (done 16:41, оркестратор напрямую)
+- [x] /tmp/kw-final: pip install . → 0.2.0, 5×--help exit 0, pip check чисто
+- [x] Live: fetch exit 0 (10 файлов), export 61/487, stats таблица, search 38, serve 200
+
 ## Волна 4: Экспорт + completion [x] (done 16:18, 163 passed, оркестратор напрямую)
 - [x] formats jsonl/csv (+реестр FORMATS, filenames, --format choices), тесты round-trip/quoting/empty/header
 - [x] contrib/kw-yt-completion.bash + README + тест покрытия; README «7 форматов», live «семью»
