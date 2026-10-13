@@ -14,7 +14,8 @@
 - [x] Gates: pytest 169, ruff clean, export --help exit 0; live: 1 видео/61 реплика/487 слов, summary ok
 - [x] Волна 8 (fix-3): галерея обложек в index.html (img 120px lazy, entries thumbnail_file, index.json совместим). Gates: 180 passed, ruff clean, live img в index.
 - [x] Review волны 8 (ora-3 → fix-3): 2 polish без блокеров (is_file, отступ). Gates: 181 passed, ruff clean.
-- [ ] Done v0.2: коммит ниже, волна 9 (аудит README), финальный отчёт.
+- [x] Волна 9 (fix-3): аудит README против CLI (10 файлов, обложки, конфиг-фолбэк). Gates: 181 passed, ruff clean.
+- [ ] Волна 10 (fixer): CHANGELOG волны 8–9 + reviews. Затем финальные gates на свежем venv + done.
 - [x] Done v0.2 (16:34 MSK, до дедлайна 17:31): коммит ниже, дерево чистое. Live-доказательства: single→9 файлов exit 0, report.html 33 ссылки, search 38–57 хитов, serve 200, export 61/487, stats таблица+JSON, thumbnail.jpg.
 - [x] Волна 6 (оркестратор): `kw-yt stats` (summarize + таблица/JSON, exit 0/1/2). Gates: 173 passed, ruff clean, live таблица+JSON ok.
 - [x] Волна 7 (оркестратор): thumbnails (fetch best-effort + <img> в report). Gates: 176 passed, ruff clean, live thumbnail.jpg + meta + report exit 0. Изоляция обложек: pop thumbnails в helper + stub-opener (fixture info.json URL содержит — честно).

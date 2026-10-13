@@ -42,7 +42,9 @@
 - [x] Тесты галереи (4) + ARCH + README; Gates + live: img в index.html корпуса
 - [x] Review волны 8 (ora-3 → fix-3): 2 polish без блокеров (is_file-защита, отступ img) — 181 passed, ruff clean
 
-## v0.2 DONE (16:35 MSK, до дедлайна 17:31 — резерв на review волны 8)
+## Волна 9: Аудит README [x] (done 16:38, 181 passed, fix-3)
+- [x] Разрывы закрыты: 10 файлов в live-check, обложки в «Что умеет», конфиг-фолбэк дефолтов; маркеры расширены
+- [x] Gates: pytest 181, ruff clean; только README + test_readme
 - [x] ora-3 fix-list: CHANGELOG волны 4–5; completion ветка export; README exit-коды; валидация сегментов → skipped; atomic-хелпер; ARCH memory-limitation; cli docstring/EXAMPLES; SPEC пп.12–13 + acceptance; тест битых сегментов
 
 ## Волна 4: Экспорт + completion [x] (done 16:18, 163 passed, оркестратор напрямую)
