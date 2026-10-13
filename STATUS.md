@@ -40,6 +40,7 @@ Floor: 3h (интервью v0.1) + продолжение по идеям/по�
 - [x] Волна 11 (wiki DONE 18:29): remote появился после стартовой страницы пользователя; 7 полных страниц запушены (7895fe1).
 - [x] Done: всё запушено (main + wiki); финальный отчёт — следующим сообщением.
 - [x] Волна 26 (fix-4): kw-yt update (автодетект 5 видов, --check, reinstall из GitHub). Gates: 276 passed, ruff/format/mypy чисто, live --check свежее. Commit 35cd280 запушен.
+- [x] Волна 27 (fix-4): library-навигатор (номера [i], детали N|id, --transcript/--format, --open, --tui построчный, --json). Gates: 292 passed, ruff/format/mypy чисто, live-демо 2 видео. Commit 39cb3fc запушен.
 - [x] Done: дерево чистое, всё запушено; wiki — единственный user-step.
 - [x] Done v0.2 (16:34 MSK, до дедлайна 17:31): коммит ниже, дерево чистое. Live-доказательства: single→9 файлов exit 0, report.html 33 ссылки, search 38–57 хитов, serve 200, export 61/487, stats таблица+JSON, thumbnail.jpg.
 - [x] Волна 6 (оркестратор): `kw-yt stats` (summarize + таблица/JSON, exit 0/1/2). Gates: 173 passed, ruff clean, live таблица+JSON ok.
