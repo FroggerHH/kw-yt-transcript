@@ -25,11 +25,22 @@
 - [x] Фаза 4 (fix-1): README RU + CHANGELOG + classifiers + test_readme (5). Gates: 66 passed, M5 XDG-изоляция + аудит, C3 локальные команды, live-check user-side.
 - [x] Oracle-review раунд 1 (ora-1): verdict fix-list, 15 findings, блокеров нет. Findings fix (fix-1): все отработаны, 72 passed.
 - [x] Oracle-review раунд 2 (ora-1): nothing actionable (первый clean).
-- [ ] Oracle-review раунд 3 (второй consecutive clean) + exhaustion passes 1–8 + done check C5.
+- [x] Exhaustion fix (fix-1): A–J внедрены, 100 passed, ruff чист. Packaging smoke: clean venv → 0.1.0, pip check чисто.
+- [x] Live end-to-end (2026-10-13, /tmp/kw-live3): `kw-yt dQw4w9WgXcQ` → exit 0, папка + meta.json + 5 transcript.*, index.json failed 0; origin manual, transcript_lang en, tool_version 0.1.0, SRT/MD валидны. SPEC acceptance доказано исполнением.
+- [ ] Oracle-review раунд 4 (final): zero-new-items подтверждение → done check C5 → `Exhaustion reached`.
 
 ## Next
-1. Exhaustion: improvement-предложения (@explorer + @oracle параллельно, read-only), live-check одной командой.
-2. Отработка принятых улучшений, ora-3, done check, финальный отчёт.
+1. Коммит A–J + docs, ora-4 final.
+2. Done check C5, финальный отчёт. Whisper-live (скачивание аудио + faster-whisper) — опционально, модель тяжёлая; остаётся user-side.
+
+## Next
+1. Дождаться fix-2, сверить gates (pytest + --help + live exit-код без пайпа), коммит.
+2. Packaging smoke (clean venv), done check C5, `Exhaustion reached` в STATUS, финальный отчёт.
+3. Live YouTube-прогон с установленными deps — если сеть к YouTube доступна; иначе user-side.
+
+## Future backlog (не делаем)
+- Resume-skip готовых папок (меняет семантику без флага — нужен отдельный дизайн).
+- Перевод транскрипта, YouTube Data API v3, TUI/Web (SPEC non-goals).
 - Next: Фаза 3 batch+ASR, Фаза 4 README/верификация/Oracle-review.
 
 ## Next

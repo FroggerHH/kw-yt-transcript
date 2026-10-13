@@ -7,7 +7,8 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 
 class NoTranscriptError(Exception):
@@ -17,7 +18,11 @@ class NoTranscriptError(Exception):
 def _normalize(raw: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """to_raw_data() -> [{text, start, duration}], start/duration — float."""
     return [
-        {"text": str(item["text"]), "start": float(item["start"]), "duration": float(item["duration"])}
+        {
+            "text": str(item["text"]),
+            "start": float(item["start"]),
+            "duration": float(item["duration"]),
+        }
         for item in raw
     ]
 
@@ -51,7 +56,7 @@ def get_transcript(
     video_id: str,
     languages: tuple[str, ...] | list[str] = ("ru", "en"),
     api_factory: Callable[[], Any] | None = None,
-) -> tuple[list[dict[str, Any]], str]:
+) -> tuple[list[dict[str, Any]], str, str | None]:
     """Получить субтитры видео.
 
     Один вызов ``list()`` + один ``fetch()``: сначала находим транскрипт
@@ -62,13 +67,21 @@ def get_transcript(
     :param languages: языки по приоритету.
     :param api_factory: callable() -> объект с методом ``list(video_id)``
         (результат — с ``find_transcript()``, итерируемый, элементы —
-        с ``is_generated`` и ``fetch()`` с ``to_raw_data()``).
+        с ``language_code``, ``is_generated`` и ``fetch()`` с ``to_raw_data()``).
         По умолчанию — реальный ``YouTubeTranscriptApi()``; в тестах — stub.
-    :return: (segments [{text, start, duration}], origin 'manual'|'auto').
+    :return: (segments [{text, start, duration}], origin 'manual'|'auto',
+        lang — language_code найденного транскрипта или None).
     :raises NoTranscriptError: субтитров нет ни на одном языке или они пустые.
     """
     if api_factory is None:
-        from youtube_transcript_api import YouTubeTranscriptApi
+        try:
+            from youtube_transcript_api import YouTubeTranscriptApi
+        except ImportError as e:
+            raise NoTranscriptError(
+                "Нет модуля youtube-transcript-api. Установите его: "
+                "pip install youtube-transcript-api "
+                "(при установке через pipx/uv зависимости ставятся сами)."
+            ) from e
 
         api_factory = YouTubeTranscriptApi
     api = api_factory()
@@ -89,4 +102,4 @@ def get_transcript(
         ) from e
     if not segments:
         raise NoTranscriptError(f"Для видео {video_id!r} получены пустые субтитры.")
-    return segments, _origin_of(transcript_obj)
+    return segments, _origin_of(transcript_obj), getattr(transcript_obj, "language_code", None)

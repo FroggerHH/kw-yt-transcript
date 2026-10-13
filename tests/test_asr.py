@@ -48,7 +48,12 @@ def test_local_file_with_stub_model(tmp_path):
     assert audio.is_file(), "свой файл не удаляем"
 
 
-def test_url_with_stub_downloader_not_deleted(tmp_path):
+def _have_ffmpeg(monkeypatch):
+    monkeypatch.setattr(asr.shutil, "which", lambda name: "/usr/bin/ffmpeg")
+
+
+def test_url_with_stub_downloader_not_deleted(monkeypatch, tmp_path):
+    _have_ffmpeg(monkeypatch)
     audio = tmp_path / "dl.mp3"
     audio.write_bytes(b"fake-audio")
     seen = {}
@@ -100,7 +105,8 @@ def test_transcribe_failure_wrapped(tmp_path):
         transcribe_whisper(str(audio), model_factory=lambda name: DeadModel())
 
 
-def test_custom_downloader_failure_wrapped():
+def test_custom_downloader_failure_wrapped(monkeypatch):
+    _have_ffmpeg(monkeypatch)
     def dead_downloader(url):
         raise RuntimeError("ERROR: Private video")
 
@@ -120,6 +126,7 @@ def test_empty_result_raises(tmp_path):
 
 
 def test_default_download_tmpdir_cleaned(monkeypatch, tmp_path):
+    _have_ffmpeg(monkeypatch)
     created = []
     real_mktemp = asr.tempfile.mkdtemp
 
@@ -140,6 +147,23 @@ def test_default_download_tmpdir_cleaned(monkeypatch, tmp_path):
     import os
 
     assert not os.path.exists(created[0]), "временное аудио должно чиститься"
+
+
+def test_ffmpeg_preflight_no_download(monkeypatch):
+    monkeypatch.setattr(asr.shutil, "which", lambda name: None)
+    called = []
+
+    def downloader(url):
+        called.append(url)
+        return "/tmp/never.mp3"
+
+    with pytest.raises(ASRError, match="ffmpeg"):
+        transcribe_whisper(
+            "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            model_factory=stub_factory(StubModel([StubSeg("текст", 0.0, 1.0)])),
+            downloader=downloader,
+        )
+    assert called == [], "без ffmpeg загрузчик не вызывается"
 
 
 def test_no_real_faster_whisper_imported():

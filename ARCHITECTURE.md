@@ -32,3 +32,6 @@ tests/           — stubs yt-dlp/transcript/whisper, без сети (M5: XDG t
 - Whisper — опциональный extra, lazy import, временное аудио чистится.
 - Свои сериализаторы SRT/VTT вместо youtube_transcript_api.formatters: форматтерам нужны FetchedTranscript-объекты, а у нас плоские dict-сегменты {text, start, duration}; таймкоды совпадают.
 - Сеть только в `metadata`/`transcript`/`asr` + `cli.expand_playlist` (flat extract оглавления); тесты мокают.
+- Дедуп входов по ключу (video_id или url) с сохранением порядка; мусорные токены — error-entries, batch идёт дальше (только мусор → exit 2 без index).
+- Запись атомарная: `*.tmp` + `os.replace` для meta.json/transcript.*/index.json.
+- Отчёт обогащён: `meta.json` — transcript_lang, fetched_at (UTC ISO), tool_version, asr_model (при origin whisper); `index.json` — playlist_url + transcript_lang в entries.

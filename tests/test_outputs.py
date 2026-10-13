@@ -72,25 +72,84 @@ def test_write_video_bad_format(tmp_path):
 
 def test_write_index_batch(tmp_path):
     results = [
-        {"meta": meta(), "dir": "testovoe-video_dQw4w9WgXcQ", "origin": "manual", "error": None},
-        {"meta": None, "dir": None, "origin": None, "error": "Не удалось получить метаданные"},
+        {
+            "meta": meta(),
+            "dir": "testovoe-video_dQw4w9WgXcQ",
+            "origin": "manual",
+            "transcript_lang": "ru",
+            "error": None,
+        },
+        {
+            "meta": None,
+            "dir": None,
+            "origin": None,
+            "transcript_lang": None,
+            "error": "Не удалось получить метаданные",
+        },
     ]
     index_path = write_index(tmp_path, results)
     index = json.loads(index_path.read_text(encoding="utf-8"))
-    assert set(index) == {"_type", "entries", "failed"}
+    assert set(index) == {"_type", "playlist_url", "entries", "failed"}
     assert index["_type"] == "batch"
+    assert index["playlist_url"] is None
     assert index["failed"] == 1
     assert index["entries"][0]["video_id"] == "dQw4w9WgXcQ"
     assert index["entries"][0]["origin"] == "manual"
+    assert index["entries"][0]["transcript_lang"] == "ru"
     assert index["entries"][1]["error"] == "Не удалось получить метаданные"
 
 
 def test_write_index_playlist(tmp_path):
     index_path = write_index(
         tmp_path,
-        [{"meta": meta(), "dir": "d", "origin": "auto", "error": None}],
+        [{"meta": meta(), "dir": "d", "origin": "auto", "transcript_lang": "en", "error": None}],
         playlist_url="https://www.youtube.com/playlist?list=PL123",
     )
     index = json.loads(index_path.read_text(encoding="utf-8"))
     assert index["_type"] == "playlist"
+    assert index["playlist_url"] == "https://www.youtube.com/playlist?list=PL123"
     assert index["failed"] == 0
+
+
+def test_write_video_report_fields(tmp_path):
+    from datetime import datetime
+
+    from kw_yt_transcript import __version__
+
+    paths = write_video(tmp_path, meta(), segments(), "manual", transcript_lang="ru")
+    record = json.loads(Path(paths["meta"]).read_text(encoding="utf-8"))
+    assert record["transcript_lang"] == "ru"
+    assert record["tool_version"] == __version__
+    datetime.fromisoformat(record["fetched_at"])
+    assert "asr_model" not in record
+
+
+def test_write_video_whisper_asr_model(tmp_path):
+    paths = write_video(
+        tmp_path, meta(), segments(), "whisper", transcript_lang=None, asr_model="small"
+    )
+    record = json.loads(Path(paths["meta"]).read_text(encoding="utf-8"))
+    assert record["origin"] == "whisper"
+    assert record["asr_model"] == "small"
+
+
+def test_atomic_write_no_partial_files(tmp_path, monkeypatch):
+    from pathlib import Path as _Path
+
+    calls = []
+
+    real_write = _Path.write_text
+
+    def flaky(self, *args, **kwargs):
+        calls.append(str(self))
+        if len(calls) == 2:
+            raise OSError("диск переполнен")
+        return real_write(self, *args, **kwargs)
+
+    monkeypatch.setattr(_Path, "write_text", flaky)
+    with pytest.raises(OSError, match="диск переполнен"):
+        write_video(tmp_path, meta(), segments(), "manual")
+    video_dir = tmp_path / "testovoe-video-pro-transkripty_dQw4w9WgXcQ"
+    names = {p.name for p in video_dir.iterdir()} if video_dir.is_dir() else set()
+    assert "transcript.srt" not in names
+    assert not [n for n in names if n.endswith(".tmp")], names

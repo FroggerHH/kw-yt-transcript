@@ -50,10 +50,15 @@ def patch_all(monkeypatch, fail_meta=(), no_subs=()):
     def fake_transcript(video_id, languages=None):
         if video_id in no_subs:
             raise NoTranscriptError("нет субтитров")
-        return SEGMENTS, "manual"
+        return SEGMENTS, "manual", "ru"
 
     monkeypatch.setattr(transcript_mod, "get_transcript", fake_transcript)
     monkeypatch.setattr(asr_mod, "transcribe_whisper", lambda *a, **k: (SEGMENTS, "whisper"))
+
+
+def expand_ok(urls):
+    """Стаб expand_playlist нового формата [{url, error}]."""
+    return lambda url: [{"url": u, "error": None} for u in urls]
 
 
 def read_index(out):
@@ -89,7 +94,7 @@ def test_playlist_expands_to_videos(monkeypatch, tmp_path):
     monkeypatch.setattr(
         cli_mod,
         "expand_playlist",
-        lambda url: [f"https://www.youtube.com/watch?v={v}" for v in VIDS],
+        expand_ok([f"https://www.youtube.com/watch?v={v}" for v in VIDS]),
     )
     out = tmp_path / "out"
     url = "https://www.youtube.com/playlist?list=PL123"
@@ -100,13 +105,12 @@ def test_playlist_expands_to_videos(monkeypatch, tmp_path):
 
 def test_multi_playlist_is_batch(monkeypatch, tmp_path):
     patch_all(monkeypatch)
-    monkeypatch.setattr(
-        cli_mod,
-        "expand_playlist",
-        lambda url: [f"https://www.youtube.com/watch?v={VIDS[0]}"]
-        if "PL1" in url
-        else [f"https://www.youtube.com/watch?v={VIDS[1]}"],
-    )
+
+    def fake_expand(url):
+        v = VIDS[0] if "PL1" in url else VIDS[1]
+        return [{"url": f"https://www.youtube.com/watch?v={v}", "error": None}]
+
+    monkeypatch.setattr(cli_mod, "expand_playlist", fake_expand)
     out = tmp_path / "out"
     urls = [
         "https://www.youtube.com/playlist?list=PL1",
@@ -123,7 +127,7 @@ def test_playlist_plus_video_is_batch(monkeypatch, tmp_path):
     monkeypatch.setattr(
         cli_mod,
         "expand_playlist",
-        lambda url: [f"https://www.youtube.com/watch?v={VIDS[1]}"],
+        expand_ok([f"https://www.youtube.com/watch?v={VIDS[1]}"]),
     )
     out = tmp_path / "out"
     url = "https://www.youtube.com/playlist?list=PL123"
@@ -174,3 +178,177 @@ def test_format_filter(monkeypatch, tmp_path):
 def test_exit_2_empty_and_garbage():
     assert cli_mod.main([]) == 2
     assert cli_mod.main(["!!!"]) == 2
+
+
+def test_mixed_garbage_partial_exit_1(monkeypatch, tmp_path):
+    patch_all(monkeypatch)
+    out = tmp_path / "out"
+    assert cli_mod.main([VIDS[0], "!!!", VIDS[1], "-o", str(out)]) == 1
+    assert len([d for d in out.iterdir() if d.is_dir()]) == 2
+    index = read_index(out)
+    assert index["failed"] == 1
+    assert len(index["entries"]) == 3
+    assert any("Непонятный вход" in (e["error"] or "") for e in index["entries"])
+
+
+def test_metadata_failure_keeps_hint_id(monkeypatch, tmp_path):
+    patch_all(monkeypatch, fail_meta=("9bZkp7q19f0",))
+    out = tmp_path / "out"
+    assert cli_mod.main([VIDS[1], "-o", str(out)]) == 1
+    index = read_index(out)
+    assert index["entries"][0]["video_id"] == "9bZkp7q19f0"
+    assert index["entries"][0]["error"]
+
+
+def test_playlist_skipped_entries_counted(monkeypatch, tmp_path):
+    patch_all(monkeypatch)
+    monkeypatch.setattr(
+        cli_mod,
+        "expand_playlist",
+        lambda url: [
+            {"url": f"https://www.youtube.com/watch?v={VIDS[0]}", "error": None},
+            {"url": None, "error": "Запись плейлиста пропущена: нет video id/URL."},
+            {"url": None, "error": "Запись плейлиста пропущена: не объект."},
+        ],
+    )
+    out = tmp_path / "out"
+    url = "https://www.youtube.com/playlist?list=PLMIX"
+    assert cli_mod.main([url, "-o", str(out)]) == 1
+    index = read_index(out)
+    assert len(index["entries"]) == 3, "len(entries)==len(playlist)"
+    assert index["failed"] == 2
+
+
+def test_expand_failure_goes_to_index(monkeypatch, tmp_path):
+    patch_all(monkeypatch)
+
+    def dead_expand(url):
+        raise MetadataError("Не удалось прочитать плейлист")
+
+    monkeypatch.setattr(cli_mod, "expand_playlist", dead_expand)
+    out = tmp_path / "out"
+    url = "https://www.youtube.com/playlist?list=PLDEAD"
+    assert cli_mod.main([url, "-o", str(out)]) == 1
+    index = read_index(out)
+    assert index["failed"] == 1
+    assert "плейлист" in index["entries"][0]["error"].lower()
+
+
+def test_langs_normalized(monkeypatch, tmp_path):
+    patch_all(monkeypatch)
+    seen = {}
+
+    def fake_transcript(video_id, languages=None):
+        seen["languages"] = list(languages)
+        return SEGMENTS, "manual", "ru"
+
+    monkeypatch.setattr(transcript_mod, "get_transcript", fake_transcript)
+    out = tmp_path / "out"
+    assert cli_mod.main([VIDS[0], "--langs", " RU ,,EN ", "-o", str(out)]) == 0
+    assert seen["languages"] == ["ru", "en"]
+
+
+def test_langs_comma_only_defaults(monkeypatch, tmp_path):
+    patch_all(monkeypatch)
+    seen = {}
+
+    def fake_transcript(video_id, languages=None):
+        seen["languages"] = list(languages)
+        return SEGMENTS, "manual", "ru"
+
+    monkeypatch.setattr(transcript_mod, "get_transcript", fake_transcript)
+    out = tmp_path / "out"
+    assert cli_mod.main([VIDS[0], "--langs", ",,", "-o", str(out)]) == 0
+    assert seen["languages"] == ["ru", "en"]
+
+
+def test_bad_langs_exit_2_no_network(monkeypatch, tmp_path):
+    calls = []
+    monkeypatch.setattr(
+        metadata_mod, "get_metadata", lambda source: calls.append(source) or make_meta(VIDS[0])
+    )
+    monkeypatch.setattr(cli_mod, "expand_playlist", lambda url: calls.append(url) or [])
+    out = tmp_path / "out"
+    assert cli_mod.main([VIDS[0], "--langs", "ru!", "-o", str(out)]) == 2
+    assert calls == [], "валидация --langs обязана быть до сети"
+
+
+def test_empty_whisper_model_exit_2_no_network(monkeypatch, tmp_path):
+    calls = []
+    monkeypatch.setattr(
+        metadata_mod, "get_metadata", lambda source: calls.append(source) or make_meta(VIDS[0])
+    )
+    out = tmp_path / "out"
+    assert cli_mod.main([VIDS[0], "--whisper-model", "  ", "-o", str(out)]) == 2
+    assert calls == []
+
+
+def test_from_file_bad_utf8_exit_2_no_network(monkeypatch, tmp_path):
+    calls = []
+    monkeypatch.setattr(
+        metadata_mod, "get_metadata", lambda source: calls.append(source) or make_meta(VIDS[0])
+    )
+    bad = tmp_path / "bad.txt"
+    bad.write_bytes(b"\xff\xfenot-utf8\n")
+    out = tmp_path / "out"
+    assert cli_mod.main(["--from-file", str(bad), "-o", str(out)]) == 2
+    assert calls == []
+    assert not out.exists(), "папка out не создаётся при usage-ошибке"
+
+
+def test_usage_errors_go_to_stderr(monkeypatch, tmp_path, capsys):
+    patch_all(monkeypatch)
+    assert cli_mod.main([]) == 2
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "Ошибка" in captured.err
+    assert cli_mod.main(["!!!"]) == 2
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "Непонятный вход" in captured.err
+
+
+def test_empty_from_file_writes_empty_index(tmp_path):
+    only_comments = tmp_path / "links.txt"
+    only_comments.write_text("# один\n# два\n\n", encoding="utf-8")
+    out = tmp_path / "out"
+    assert cli_mod.main(["--from-file", str(only_comments), "-o", str(out)]) == 2
+    index = read_index(out)
+    assert index["entries"] == []
+    assert index["failed"] == 0
+
+
+def test_readonly_out_exit_2(monkeypatch, tmp_path):
+    from pathlib import Path as _Path
+
+    patch_all(monkeypatch)
+
+    def dead_mkdir(self, *args, **kwargs):
+        raise PermissionError("доступ запрещён")
+
+    monkeypatch.setattr(_Path, "mkdir", dead_mkdir)
+    assert cli_mod.main([VIDS[0], "-o", str(tmp_path / "out")]) == 2
+
+
+def test_write_index_oserror_exit_2(monkeypatch, tmp_path):
+    from kw_yt_transcript import outputs as outputs_mod
+
+    patch_all(monkeypatch)
+    monkeypatch.setattr(
+        outputs_mod, "write_index", lambda *a, **k: (_ for _ in ()).throw(OSError("ROFS"))
+    )
+    assert cli_mod.main([VIDS[0], "-o", str(tmp_path / "out")]) == 2
+
+
+def test_index_report_fields(monkeypatch, tmp_path):
+    patch_all(monkeypatch)
+    out = tmp_path / "out"
+    assert cli_mod.main([VIDS[0], "-o", str(out)]) == 0
+    index = read_index(out)
+    assert index["playlist_url"] is None
+    assert index["entries"][0]["transcript_lang"] == "ru"
+    (video_dir,) = [d for d in out.iterdir() if d.is_dir()]
+    record = json.loads((video_dir / "meta.json").read_text(encoding="utf-8"))
+    assert record["transcript_lang"] == "ru"
+    assert record["tool_version"]
+    assert record["fetched_at"]

@@ -5,7 +5,7 @@ import re
 from pathlib import Path
 
 from kw_yt_transcript import formats
-from kw_yt_transcript.formats import to_json, to_md, to_srt, to_txt, to_vtt
+from kw_yt_transcript.formats import paragraphs, to_json, to_md, to_srt, to_txt, to_vtt
 
 FIXTURES = Path(__file__).parent / "fixtures"
 SEGMENTS = json.loads((FIXTURES / "segments.json").read_text(encoding="utf-8"))
@@ -91,3 +91,27 @@ def test_empty_segments():
 
 def test_formats_registry_covers_all():
     assert set(formats.FORMATS) == {"srt", "vtt", "json", "txt", "md"}
+
+
+def test_paragraphs_edge_cases():
+    assert paragraphs([]) == []
+    single = [{"text": "один", "start": 0.0, "duration": 1.0}]
+    assert paragraphs(single) == ["один"]
+    # Перекрытие (отрицательная пауза) — тот же абзац.
+    overlap = [
+        {"text": "а", "start": 0.0, "duration": 5.0},
+        {"text": "б", "start": 3.0, "duration": 1.0},
+    ]
+    assert paragraphs(overlap) == ["а б"]
+    # Ровно 2.0с — не разрыв (нужно строго >).
+    exact = [
+        {"text": "а", "start": 0.0, "duration": 1.0},
+        {"text": "б", "start": 3.0, "duration": 1.0},
+    ]
+    assert paragraphs(exact) == ["а б"]
+    # Нулевая длительность не ломает склейку.
+    zero = [
+        {"text": "а", "start": 0.0, "duration": 0.0},
+        {"text": "б", "start": 0.0, "duration": 1.0},
+    ]
+    assert paragraphs(zero) == ["а б"]

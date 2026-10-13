@@ -1,4 +1,4 @@
-"""Тесты transcript.get_transcript: без сети, HOME, transcript-библиотеки (stub через api_factory)."""
+"""Тесты transcript.get_transcript: без сети, HOME, transcript-библиотеки."""
 
 import json
 import sys
@@ -56,9 +56,11 @@ class StubApi:
         self.last_list = None
 
     def list(self, video_id):
-        self.last_list = StubTranscriptList(
-            [StubTranscript(lang, self._generated.get(lang, False), raw) for lang, raw in self._by_lang.items()]
-        )
+        transcripts = [
+            StubTranscript(lang, self._generated.get(lang, False), raw)
+            for lang, raw in self._by_lang.items()
+        ]
+        self.last_list = StubTranscriptList(transcripts)
         return self.last_list
 
 
@@ -68,28 +70,36 @@ def ru_en_api():
 
 def test_ru_priority_and_manual_origin():
     api = ru_en_api()
-    segments, origin = get_transcript("dQw4w9WgXcQ", api_factory=lambda: api)
+    segments, origin, lang = get_transcript("dQw4w9WgXcQ", api_factory=lambda: api)
     assert api.last_list.seen_languages == ["ru", "en"]
     assert segments == [
-        {"text": s["text"], "start": float(s["start"]), "duration": float(s["duration"])} for s in SEGMENTS
+        {"text": s["text"], "start": float(s["start"]), "duration": float(s["duration"])}
+        for s in SEGMENTS
     ]
     assert all(isinstance(s["start"], float) for s in segments)
     assert origin == "manual"
+    assert lang == "ru"
 
 
 def test_custom_languages_passed_through():
     api = StubApi({"en": SEGMENTS}, {"en": True})
-    segments, origin = get_transcript("dQw4w9WgXcQ", languages=("en",), api_factory=lambda: api)
+    segments, origin, lang = get_transcript(
+        "dQw4w9WgXcQ", languages=("en",), api_factory=lambda: api
+    )
     assert api.last_list.seen_languages == ["en"]
     assert len(segments) == len(SEGMENTS)
     assert origin == "auto"
+    assert lang == "en"
 
 
 def test_fallback_to_first_available():
     api = StubApi({"en": SEGMENTS}, {"en": True})
-    segments, origin = get_transcript("dQw4w9WgXcQ", languages=("ru", "de"), api_factory=lambda: api)
+    segments, origin, lang = get_transcript(
+        "dQw4w9WgXcQ", languages=("ru", "de"), api_factory=lambda: api
+    )
     assert len(segments) == len(SEGMENTS)
     assert origin == "auto"
+    assert lang == "en"
 
 
 def test_no_transcripts_raises_russian():
@@ -111,6 +121,12 @@ def test_list_failure_raises_no_transcript():
 
     with pytest.raises(NoTranscriptError, match="субтитры"):
         get_transcript("dQw4w9WgXcQ", api_factory=lambda: DeadApi({}, {}))
+
+
+def test_missing_library_hint(monkeypatch):
+    monkeypatch.setitem(sys.modules, "youtube_transcript_api", None)
+    with pytest.raises(NoTranscriptError, match="pip install youtube-transcript-api"):
+        get_transcript("dQw4w9WgXcQ")
 
 
 def test_no_real_library_imported():

@@ -9,14 +9,18 @@
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 from pathlib import Path
 from typing import Any
 
 from kw_yt_transcript import __version__, asr, metadata, outputs, transcript
-from kw_yt_transcript.inputs import parse_inputs
+from kw_yt_transcript.inputs import parse_inputs_with_errors
 from kw_yt_transcript.metadata import MetadataError
 from kw_yt_transcript.transcript import NoTranscriptError
+
+#: Языки --langs после нормализации: латиница/дефис, 2–12 символов.
+_LANG_RE = re.compile(r"^[a-z-]{2,12}$")
 
 EXAMPLES = """Примеры:
   kw-yt dQw4w9WgXcQ
@@ -94,8 +98,11 @@ def build_parser() -> argparse.ArgumentParser:
     return p
 
 
-def expand_playlist(url: str, ydl_factory=None) -> list[str]:
-    """Flat-развёртка плейлиста в список URL видео (ленивый yt-dlp).
+def expand_playlist(url: str, ydl_factory=None) -> list[dict[str, Any]]:
+    """Flat-развёртка плейлиста -> [{url|None, error|None}].
+
+    Пропущенные записи (non-dict, без id/URL) не теряются: возвращаются
+    с error, чтобы число элементов равнялось числу записей плейлиста.
 
     :param ydl_factory: инъекция для тестов (как в metadata.get_metadata).
     """
@@ -112,12 +119,17 @@ def expand_playlist(url: str, ydl_factory=None) -> list[str]:
     out = []
     for entry in entries:
         if not isinstance(entry, dict):
+            out.append({"url": None, "error": f"Запись плейлиста {url!r} пропущена: не объект."})
             continue
         entry_url = entry.get("url") or ""
         if "://" in entry_url:
-            out.append(entry_url)
+            out.append({"url": entry_url, "error": None})
         elif entry.get("id"):
-            out.append(f"https://www.youtube.com/watch?v={entry['id']}")
+            out.append({"url": f"https://www.youtube.com/watch?v={entry['id']}", "error": None})
+        else:
+            out.append(
+                {"url": None, "error": f"Запись плейлиста {url!r} пропущена: нет video id/URL."}
+            )
     return out
 
 
@@ -133,6 +145,7 @@ def _process_video(
     """Одно видео: метаданные → субтитры (или Whisper) → файлы.
 
     Не бросает исключений: неуспех возвращается как result с ``error``.
+    При падении get_metadata в entries сохраняется hint (video_id/url).
     """
     meta: dict[str, Any] | None = None
     try:
@@ -141,65 +154,152 @@ def _process_video(
         if not video_id:
             raise MetadataError(f"yt-dlp не вернул video id для {source!r}.")
         try:
-            segments, origin = transcript.get_transcript(video_id, languages=langs)
+            segments, origin, lang = transcript.get_transcript(video_id, languages=langs)
         except NoTranscriptError:
             if not use_whisper:
                 raise
             segments, origin = asr.transcribe_whisper(
                 meta.get("url") or source, model_name=whisper_model
             )
-        paths = outputs.write_video(out_dir, meta, segments, origin, formats_sel)
-        return {"meta": meta, "dir": Path(paths["dir"]).name, "origin": origin, "error": None}
+            lang = None
+        paths = outputs.write_video(
+            out_dir,
+            meta,
+            segments,
+            origin,
+            formats_sel,
+            transcript_lang=lang,
+            asr_model=whisper_model if origin == "whisper" else None,
+        )
+        return {
+            "meta": meta,
+            "dir": Path(paths["dir"]).name,
+            "origin": origin,
+            "transcript_lang": lang,
+            "error": None,
+        }
     except Exception as e:
-        return {"meta": meta, "dir": None, "origin": None, "error": str(e)}
+        if meta is None:
+            meta = {"video_id": hint_id, "url": source, "title": None}
+        return {
+            "meta": meta,
+            "dir": None,
+            "origin": None,
+            "transcript_lang": None,
+            "error": str(e),
+        }
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Точка входа. Коды: 0 — всё ок, 1 — частичные ошибки, 2 — usage/фатальное."""
+    """Точка входа. Коды: 0 — всё ок, 1 — частичные ошибки, 2 — usage/фатальное.
+
+    Весь вывод — в stderr, stdout остаётся пустым.
+    """
     args = build_parser().parse_args(argv)
 
     try:
-        jobs = parse_inputs(args.inputs, from_file=args.from_file)
+        jobs, input_errors = parse_inputs_with_errors(args.inputs, from_file=args.from_file)
     except ValueError as e:
-        print(f"Ошибка: {e}", flush=True)
+        print(f"Ошибка: {e}", file=sys.stderr, flush=True)
         return 2
 
-    if not jobs:
+    if not jobs and not input_errors and args.from_file is None:
         print(
             "Ошибка: не указаны входные данные. "
             "Передайте video id / URL или используйте --from-file. "
             "См. kw-yt --help.",
+            file=sys.stderr,
             flush=True,
         )
         return 2
+
+    # Ранняя валидация до любой сети: языки и модель.
+    langs = [lang.strip().lower() for lang in args.langs.split(",") if lang.strip()]
+    if not langs:
+        langs = ["ru", "en"]
+    bad_langs = [lang for lang in langs if not _LANG_RE.match(lang)]
+    if bad_langs:
+        print(
+            f"Ошибка: неверные языки в --langs: {', '.join(bad_langs)}. "
+            "Ожидаются коды вида 'ru', 'en', 'en-us' (латиница/дефис, 2–12 символов).",
+            file=sys.stderr,
+            flush=True,
+        )
+        return 2
+    whisper_model = args.whisper_model.strip()
+    if not whisper_model:
+        print("Ошибка: --whisper-model не должен быть пустым.", file=sys.stderr, flush=True)
+        return 2
+    use_whisper = not args.no_fallback_whisper
 
     out_dir = Path(args.out)
     try:
         out_dir.mkdir(parents=True, exist_ok=True)
     except OSError as e:
-        print(f"Ошибка: не могу создать папку {args.out!r}: {e}", flush=True)
+        print(f"Ошибка: не могу создать папку {args.out!r}: {e}", file=sys.stderr, flush=True)
         return 2
 
-    langs = [lang.strip() for lang in args.langs.split(",") if lang.strip()] or ["ru", "en"]
-    use_whisper = not args.no_fallback_whisper
+    if not jobs and not input_errors:
+        # Пустой --from-file: только комменты/пустые строки — пустой index, exit 2.
+        try:
+            outputs.write_index(out_dir, [], None)
+        except OSError as e:
+            print(f"Ошибка: не могу записать index.json: {e}", file=sys.stderr, flush=True)
+        print(
+            "Предупреждение: во входах нет видео — нечего обрабатывать.",
+            file=sys.stderr,
+            flush=True,
+        )
+        return 2
+
+    # Мусорные токены — error-entries, batch идёт дальше; только мусор → exit 2 без index.
+    results: list[dict[str, Any]] = []
+    for err in input_errors:
+        results.append(
+            {"meta": None, "dir": None, "origin": None, "transcript_lang": None, "error": err}
+        )
+        print(f"вход: FAIL: {err}", file=sys.stderr)
+    if not jobs:
+        return 2
 
     # Плейлисты разворачиваем в видео; неуспешный expand — ошибка-запись, batch идёт дальше.
+    # Пропущенные записи плейлиста — skipped error-entries (len(entries)==len(playlist)).
     video_tasks: list[tuple[str, str | None]] = []
     playlist_urls: list[str] = []
     has_video_jobs = False
-    results: list[dict[str, Any]] = []
     for job in jobs:
         if job["kind"] == "playlist":
             url = job.get("url") or job.get("raw", "")
             playlist_urls.append(url)
             try:
-                entries = expand_playlist(url)
+                items = expand_playlist(url)
             except Exception as e:
-                results.append({"meta": None, "dir": None, "origin": None, "error": str(e)})
+                results.append(
+                    {
+                        "meta": None,
+                        "dir": None,
+                        "origin": None,
+                        "transcript_lang": None,
+                        "error": str(e),
+                    }
+                )
                 print(f"плейлист {url}: FAIL: {e}", file=sys.stderr)
                 continue
-            for entry_url in entries:
-                video_tasks.append((entry_url, None))
+            for item in items:
+                if item.get("error") or not item.get("url"):
+                    results.append(
+                        {
+                            "meta": None,
+                            "dir": None,
+                            "origin": None,
+                            "transcript_lang": None,
+                            "error": item.get("error")
+                            or f"Запись плейлиста {url!r} пропущена.",
+                        }
+                    )
+                    print(f"плейлист {url}: SKIP: {results[-1]['error']}", file=sys.stderr)
+                else:
+                    video_tasks.append((item["url"], None))
         else:
             has_video_jobs = True
             video_tasks.append(
@@ -212,18 +312,18 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     if not video_tasks and not results:
-        print("Ошибка: по заданным входам видео не найдено.", flush=True)
+        print("Ошибка: по заданным входам видео не найдено.", file=sys.stderr, flush=True)
         try:
             outputs.write_index(out_dir, [], index_playlist_url)
         except OSError as e:
-            print(f"Ошибка: не могу записать index.json: {e}", flush=True)
+            print(f"Ошибка: не могу записать index.json: {e}", file=sys.stderr, flush=True)
         return 2
 
     total = len(video_tasks)
     for i, (source, hint_id) in enumerate(video_tasks, 1):
         label = hint_id or source
         result = _process_video(
-            source, hint_id, langs, use_whisper, args.whisper_model, out_dir, args.format
+            source, hint_id, langs, use_whisper, whisper_model, out_dir, args.format
         )
         results.append(result)
         if result["error"]:
@@ -234,14 +334,17 @@ def main(argv: list[str] | None = None) -> int:
             )
 
     try:
-        index_path = outputs.write_index(out_dir, results, index_playlist_url)
+        outputs.write_index(out_dir, results, index_playlist_url)
     except OSError as e:
-        print(f"Ошибка: не могу записать index.json: {e}", flush=True)
+        print(f"Ошибка: не могу записать index.json: {e}", file=sys.stderr, flush=True)
         return 2
 
     failed = sum(1 for r in results if r["error"])
     ok = len(results) - failed
-    print(f"Готово: {ok}/{len(results)}, ошибок: {failed}. Папка: {out_dir}.")
+    print(
+        f"Готово: {ok}/{len(results)}, ошибок: {failed}. Папка: {out_dir}.",
+        file=sys.stderr,
+    )
     return 1 if failed else 0
 
 

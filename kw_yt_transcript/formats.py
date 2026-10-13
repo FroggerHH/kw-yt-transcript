@@ -75,9 +75,9 @@ def to_srt(segments: list[dict[str, Any]], meta: dict[str, Any] | None = None) -
     del meta  # meta для SRT не нужна, аргумент — ради единого интерфейса
     cues = []
     for i, seg in enumerate(segments, 1):
-        cues.append(
-            f"{i}\n{_srt_ts(seg['start'])} --> {_srt_ts(seg['start'] + seg['duration'])}\n{seg['text']}"
-        )
+        start = _srt_ts(seg["start"])
+        end = _srt_ts(seg["start"] + seg["duration"])
+        cues.append(f"{i}\n{start} --> {end}\n{seg['text']}")
     return "\n\n".join(cues) + ("\n" if cues else "")
 
 

@@ -21,7 +21,14 @@
 - [x] Oracle-review раунд 1 (ora-1): verdict fix-list, 15 findings, блокеров нет.
 - [x] Findings fix (fix-1): все 15 отработаны (п.13 осознанно без изменений), 72 passed.
 - [x] Oracle-review раунд 2 (ora-1): nothing actionable.
-- [ ] Oracle-review раунд 3 (подтвердить второй consecutive clean) + exhaustion passes 1–8 + done check C5.
+- [x] Oracle-review раунд 3 (ora-1): nothing actionable (второй consecutive clean — условие exhaustion по review выполнено) + 7 improvement-предложений с верификацией.
+- [x] Exhaustion lanes: ora-3 clean (второй consecutive) + 7 предложений; exp-1 10 предложений; live-check находка (английский ModuleNotFoundError без deps).
+- [x] Exhaustion fix (fix-1): A–J внедрены, 100 passed (72+28), ruff E/F/W/I/UP чист.
+- [x] Packaging smoke: clean venv pip install . → kw-yt 0.1.0, --help exit 0, pip check чисто.
+- [x] Live end-to-end: Never Gonna Give You Up → exit 0, 6 файлов, origin manual lang en, индекс ok (evidence в STATUS).
+- [ ] Oracle-review раунд 4 (final, background): zero-new-items подтверждение. Затем done check C5.
+- Принято: A.meta/index enrichment (transcript_lang, fetched_at, tool_version, asr_model, playlist_url); B.дедуп входов; C.атомарная запись; D.нормализация langs; E.мусор→partial entries exit 1; F.hint_id упавших + счёт пропущенных плейлиста; G.ранняя валидация опций/файла; H.русские hints missing-deps + ffmpeg-preflight; I.stderr-консистентность + пустой from-file→index + readonly-тест; J.ruff select + тесты пробелов.
+- Rejected: resume-skip готовых папок (меняет семантику без флага); _VIDEO_ID_RE dedup (решено в round1 п.13); новые флаги; перевод/Data API/TUI.
 
 ## Future backlog (не делаем)
 - Перевод транскрипта, YouTube Data API v3, TUI/Web — причины в SPEC non-goals.

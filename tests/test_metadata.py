@@ -46,7 +46,9 @@ def make_factory(stub):
 
 def test_full_mapping():
     stub = StubYDL(info=load_info())
-    meta = get_metadata("https://www.youtube.com/watch?v=dQw4w9WgXcQ", ydl_factory=make_factory(stub))
+    meta = get_metadata(
+        "https://www.youtube.com/watch?v=dQw4w9WgXcQ", ydl_factory=make_factory(stub)
+    )
     assert meta["video_id"] == "dQw4w9WgXcQ"
     assert meta["url"] == "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
     assert meta["title"] == "Тестовое видео про транскрипты"
@@ -113,6 +115,12 @@ def test_empty_info_raises():
     stub = StubYDL(info=None)
     with pytest.raises(MetadataError):
         get_metadata("dQw4w9WgXcQ", ydl_factory=make_factory(stub))
+
+
+def test_missing_ytdlp_hint(monkeypatch):
+    monkeypatch.setitem(sys.modules, "yt_dlp", None)
+    with pytest.raises(MetadataError, match="pip install yt-dlp"):
+        get_metadata("dQw4w9WgXcQ")
 
 
 def test_no_real_ytdlp_imported():

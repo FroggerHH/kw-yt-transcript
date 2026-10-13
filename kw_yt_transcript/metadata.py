@@ -8,7 +8,8 @@
 from __future__ import annotations
 
 import re
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 #: Голый video id (без URL) нормализуем в watch-URL перед передачей в yt-dlp.
 _VIDEO_ID_RE = re.compile(r"^[A-Za-z0-9_-]{11}$")
@@ -21,8 +22,13 @@ class MetadataError(Exception):
 
 
 def _default_ydl_factory(opts: dict[str, Any]):
-    import yt_dlp
-
+    try:
+        import yt_dlp
+    except ImportError as e:
+        raise MetadataError(
+            "Нет модуля yt-dlp. Установите его: pip install yt-dlp "
+            "(при установке через pipx/uv зависимости ставятся сами)."
+        ) from e
     return yt_dlp.YoutubeDL(opts)
 
 

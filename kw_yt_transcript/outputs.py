@@ -7,10 +7,13 @@
 from __future__ import annotations
 
 import json
+import os
 import re
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from kw_yt_transcript import __version__
 from kw_yt_transcript.formats import FORMATS
 
 #: Имя формата -> имя файла транскрипта.
@@ -58,14 +61,34 @@ def _resolve_formats(formats_sel: str) -> list[str]:
     )
 
 
+def _atomic_write_text(path: Path, content: str) -> None:
+    """Атомарная запись: сначала *.tmp, затем os.replace; мусор чистим."""
+    tmp = path.with_name(path.name + ".tmp")
+    try:
+        tmp.write_text(content, encoding="utf-8")
+        os.replace(tmp, path)
+    except Exception:
+        try:
+            tmp.unlink(missing_ok=True)
+        except OSError:
+            pass
+        raise
+
+
 def write_video(
     out_dir: str | Path,
     meta: dict[str, Any],
     segments: list[dict[str, Any]],
     origin: str,
     formats_sel: str = "all",
+    transcript_lang: str | None = None,
+    asr_model: str | None = None,
 ) -> dict[str, str]:
     """Записать папку ``<slug>_<video_id>/``: meta.json + файлы транскрипта.
+
+    В meta.json дописываются transcript_lang, fetched_at (UTC ISO),
+    tool_version и asr_model (только при origin 'whisper').
+    Все файлы пишутся атомарно (*.tmp + os.replace).
 
     :return: словарь путей {dir, meta, srt?, vtt?, json?, txt?, md?} (строки).
     """
@@ -75,8 +98,13 @@ def write_video(
 
     record = dict(meta)
     record["origin"] = origin
+    record["transcript_lang"] = transcript_lang
+    record["fetched_at"] = datetime.now(timezone.utc).isoformat()
+    record["tool_version"] = __version__
+    if origin == "whisper" and asr_model:
+        record["asr_model"] = asr_model
     meta_path = video_dir / "meta.json"
-    meta_path.write_text(json.dumps(record, ensure_ascii=False, indent=2), encoding="utf-8")
+    _atomic_write_text(meta_path, json.dumps(record, ensure_ascii=False, indent=2))
 
     md_meta = dict(meta)
     md_meta["origin"] = origin
@@ -84,7 +112,7 @@ def write_video(
     for name in _resolve_formats(formats_sel):
         content = FORMATS[name](segments, md_meta)
         file_path = video_dir / TRANSCRIPT_FILENAMES[name]
-        file_path.write_text(content, encoding="utf-8")
+        _atomic_write_text(file_path, content)
         paths[name] = str(file_path)
     return paths
 
@@ -94,9 +122,10 @@ def write_index(
     results: list[dict[str, Any]],
     playlist_url: str | None = None,
 ) -> Path:
-    """Записать сводный index.json: {_type, entries, failed}.
+    """Записать сводный index.json: {_type, playlist_url, entries, failed}.
 
-    :param results: список {meta|None, dir|None (имя папки), origin|None, error|None}.
+    :param results: список {meta|None, dir|None (имя папки), origin|None,
+        transcript_lang|None, error|None}.
     :param playlist_url: задан -> _type 'playlist', иначе 'batch'.
     """
     entries = []
@@ -108,14 +137,16 @@ def write_index(
                 "title": meta.get("title"),
                 "dir": r.get("dir"),
                 "origin": r.get("origin"),
+                "transcript_lang": r.get("transcript_lang"),
                 "error": r.get("error"),
             }
         )
     index = {
         "_type": "playlist" if playlist_url else "batch",
+        "playlist_url": playlist_url,
         "entries": entries,
         "failed": sum(1 for r in results if r.get("error")),
     }
     index_path = Path(out_dir) / "index.json"
-    index_path.write_text(json.dumps(index, ensure_ascii=False, indent=2), encoding="utf-8")
+    _atomic_write_text(index_path, json.dumps(index, ensure_ascii=False, indent=2))
     return index_path

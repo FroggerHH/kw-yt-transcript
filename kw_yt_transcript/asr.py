@@ -9,8 +9,9 @@ from __future__ import annotations
 
 import shutil
 import tempfile
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 
 class ASRError(Exception):
@@ -73,14 +74,18 @@ def transcribe_whisper(
     try:
         if Path(source).is_file():
             audio = str(source)
-        elif downloader is not None:
-            try:
-                audio = downloader(str(source))  # чужой файл — не удаляем
-            except Exception as e:
-                raise ASRError(f"Не удалось скачать аудио {str(source)!r}: {e}") from e
         else:
-            tmpdir = tempfile.mkdtemp(prefix="kw-yt-asr-")
-            audio = _download_bestaudio(str(source), tmpdir)
+            # Аудио нет локально — понадобится скачивание, а ему нужен ffmpeg.
+            if shutil.which("ffmpeg") is None:
+                raise ASRError("Нет ffmpeg. Установите ffmpeg — он нужен для скачивания аудио.")
+            if downloader is not None:
+                try:
+                    audio = downloader(str(source))  # чужой файл — не удаляем
+                except Exception as e:
+                    raise ASRError(f"Не удалось скачать аудио {str(source)!r}: {e}") from e
+            else:
+                tmpdir = tempfile.mkdtemp(prefix="kw-yt-asr-")
+                audio = _download_bestaudio(str(source), tmpdir)
 
         factory = model_factory or _default_model_factory
         try:
