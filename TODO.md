@@ -32,9 +32,12 @@
 
 ## Волна 7: Обложки [x] (done, 176 passed, оркестратор напрямую)
 - [x] outputs.fetch_thumbnail + _best_thumbnail_url + write_video (best-effort, thumbnail_file, paths thumb) + report <img>
-- [x] Тесты stub/fail/no-thumbs + изоляция фикстуры (URL вычищены, M5); README/ARCH/SPEC/CHANGELOG; live: thumbnail.jpg + meta + report exit 0
+- [x] Тесты stub/fail/no-thumbs + изоляция обложек: pop thumbnails в helper + stub-opener (fixture info.json URL содержит — честно); README/ARCH/SPEC/CHANGELOG; live: thumbnail.jpg + meta + report exit 0
 
-## Финал review волн 4–5 [x] (done 16:25, 170 passed, оркестратор напрямую)
+## Финал review волн 6–7 [x] (done 16:33, 176 passed: span fix, минуты, CHANGELOG, ARCH 7 файлов, SPEC 15, README thumbnail_file — частично оркестратор, доки — fix-3)
+- [x] ora-3 fix-list без блокеров отработан полностью; Gates: pytest 176, ruff clean
+
+## v0.2 DONE (16:33 MSK, до дедлайна 17:31)
 - [x] ora-3 fix-list: CHANGELOG волны 4–5; completion ветка export; README exit-коды; валидация сегментов → skipped; atomic-хелпер; ARCH memory-limitation; cli docstring/EXAMPLES; SPEC пп.12–13 + acceptance; тест битых сегментов
 
 ## Волна 4: Экспорт + completion [x] (done 16:18, 163 passed, оркестратор напрямую)

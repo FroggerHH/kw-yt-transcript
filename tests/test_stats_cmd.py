@@ -41,6 +41,7 @@ def test_stats_table_and_counts(tmp_path, capsys):
     out = capsys.readouterr().out
     assert "видео 2" in out
     assert "слов 4" in out
+    assert "минут 2.5" in out
     assert "Первое" in out and "id1" in out
     assert "manual: 1" in out
     assert "Пропущено папок без транскрипта: 1." in out
@@ -52,6 +53,7 @@ def test_stats_json_parses(tmp_path, capsys):
     summary = json.loads(capsys.readouterr().out)
     assert summary["n_videos"] == 2
     assert summary["total_words"] == 4
+    assert summary["total_minutes"] == 2.5
     assert summary["by_lang"] == {"ru": 1, "unknown": 1}
     assert summary["skipped"] == 1
     assert summary["videos"][0]["video_id"] == "id1"

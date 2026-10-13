@@ -13,15 +13,13 @@
 - **Волна 3a — hardening по review:** тихий отсутствующий конфиг, сильный
   resume-комплект, search за O(n log n), `as_completed`-прогресс, общий
   `timefmt.py`, whisper-семафор (2), версии Python 3.11+ везде.
-- Тестов 159 (было 100), ruff `E/F/W/I/UP` чисто.
+- Тестов 176 (было 100 в v0.1), ruff `E/F/W/I/UP` чисто.
 - **Волна 4 — экспорт форматов + completion:** `jsonl` (строки для RAG)
   и `csv` (таблица) в `--format`/`FORMATS`, `contrib/kw-yt-completion.bash`.
 - **Волна 5 — сводный экспорт:** `kw-yt export` (один `corpus.jsonl/csv` +
   `summary.json` со счётчиками, `by_origin` и `skipped`).
 - **Волна 6 — статистика корпуса:** `kw-yt stats` (таблица/JSON: видео,
   реплики, слова, минуты, `by_origin`/`by_lang`) без скачивания.
-- **Волна 4 — экспорт форматов + completion (доп.):** `jsonl`/`csv` в `--format`,
-  `contrib/kw-yt-completion.bash`.
 - **Волна 7 — обложки:** `thumbnail.jpg` best-effort в папке видео + `<img>`
   в `report.html` (`thumbnail_file` в meta.json).
 

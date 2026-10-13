@@ -15,7 +15,7 @@
    - источник 2 (fallback): Whisper ASR по аудиодорожке, если субтитров нет
    - форматы вывода: с таймкодами (SRT/VTT/JSON) + читаемый текст с абзацами (TXT/Markdown)
 4. **CLI на русском:** `--help`, понятные ошибки, коды выхода, пакетный прогон с прогрессом.
-5. **Выходная структура:** папка на видео (slug/id), `meta.json`, `transcript.srt`, `transcript.vtt`, `transcript.json`, `transcript.txt`, `transcript.md`, `thumbnail.jpg` (best-effort).
+5. **Выходная структура:** папка на видео (slug/id), `meta.json`, `transcript.srt`, `transcript.vtt`, `transcript.json`, `transcript.jsonl`, `transcript.csv`, `transcript.txt`, `transcript.md`, `thumbnail.jpg` (best-effort).
 
 ## Non-goals
 - Скачивание видео/аудио как цель (только временное аудио для Whisper, с очисткой).
@@ -23,7 +23,7 @@
 - Перевод транскрипта (deferred в Future backlog).
 
 ## v0.2 Scope (расширение, 2026-10-13, по требованию пользователя)
-6. **HTML-отчёты:** на видео — один `report.html` (метаданные, статистика, главы-ссылки, транскрипт с кликабельными таймкодами `?t=`, поиск по тексту с подсветкой); на batch/плейлист — `index.html` со списком видео и общей статистикой. Только stdlib (встроенные CSS/JS), без внешних CDN.
+6. **HTML-отчёты:** на видео — один `report.html` (метаданные, обложка `thumbnail.jpg` best-effort, статистика, главы-ссылки, транскрипт с кликабельными таймкодами `?t=`, поиск по тексту с подсветкой); на batch/плейлист — `index.html` со списком видео и общей статистикой. Только stdlib (встроенные CSS/JS), без внешних CDN.
 7. **Статистика текста:** words, chars, reading_time_min, speaking_wpm, top_keywords (TF + встроенные стоп-слова ru/en) — в `meta.json` + шапку HTML/MD.
 8. **Поиск по корпусу:** `kw-yt search <запрос> --in ./out` — вхождения с контекстом `±N сек`, ранжирование по числу вхождений, RU-вывод, exit 0/1 (нашёл/нет).
 9. **Просмотр корпуса:** `kw-yt serve ./out [--port]` — stdlib HTTP-сервер по готовым index.html/report.html.
@@ -31,7 +31,7 @@
 12. **Экспортные форматы:** `jsonl` (строки `{video_id,title,start,duration,text}` для RAG) и `csv` (таблица) в `--format`/`FORMATS` + `contrib/kw-yt-completion.bash`.
 13. **Сводный экспорт:** `kw-yt export` — склейка `*/transcript.json` в один `corpus.jsonl/csv` + `summary.json` (счётчики, `by_origin`, `skipped`); пустой корпус → exit 1.
 14. **Сводная статистика:** `kw-yt stats` — таблица/JSON по корпусу (видео, реплики, слова, минуты, `by_origin`/`by_lang`) без скачивания; пустой корпус → exit 1.
-11. **Acceptance v0.2:** live single → report.html открывается и содержит таймкоды; search находит слово из живого транскрипта; serve отдаёт 200 на index; повторный прогон с --resume не зовёт сеть (тест); конфиг читается; export склеивает корпус в corpus.jsonl + summary.json (тест + live); весь набор тестов зелёный.
+15. **Acceptance v0.2:** live single → report.html открывается и содержит таймкоды; search находит слово из живого транскрипта; serve отдаёт 200 на index; повторный прогон с --resume не зовёт сеть (тест); конфиг читается; export склеивает корпус в corpus.jsonl + summary.json (тест + live); stats показывает минуты, обложки best-effort (`thumbnail.jpg`/`thumbnail_file: null`); весь набор тестов зелёный.
 ## Acceptance criteria (v0.1)
 - `kw-yt --help` работает, `--version` показывает версию.
 - Одиночное видео с субтитрами → все 5 файлов, таймкоды корректны.

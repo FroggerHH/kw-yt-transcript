@@ -192,7 +192,8 @@ out/
 `upload_date`, `view_count`, `like_count`, `description`, `chapters`, `thumbnails`,
 `tags`, `categories`, `subtitles_keys`, `automatic_captions_keys`, `origin`,
 `transcript_lang`, `fetched_at`, `tool_version`, `asr_model` (только при `origin: whisper`),
-`stats` (`words`, `chars`, `reading_time_min`, `speaking_wpm`, `top_keywords`).
+`stats` (`words`, `chars`, `reading_time_min`, `speaking_wpm`, `top_keywords`),
+`thumbnail_file` (`thumbnail.jpg`/null, best-effort).
 
 `origin` — источник текста: `manual` (ручные субтитры), `auto` (автосубтитры),
 `whisper` (распознавание речи).

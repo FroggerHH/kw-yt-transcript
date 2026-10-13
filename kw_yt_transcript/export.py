@@ -164,8 +164,9 @@ def summarize(videos: list[dict[str, Any]], skipped: list[dict[str, Any]]) -> di
             words = 0
         span = 0.0
         try:
+            starts = [float(s["start"]) for s in v["segments"]]
             ends = [float(s["start"]) + float(s["duration"]) for s in v["segments"]]
-            span = max(ends) if ends else 0.0
+            span = max(ends) - min(starts) if ends and starts else 0.0
         except Exception:
             span = 0.0
         total_words += words

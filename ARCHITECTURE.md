@@ -14,7 +14,7 @@ kw_yt_transcript/
   transcript.py  — YouTubeTranscriptApi().list() → find_transcript(langs) → fetch() → to_raw_data; is_generated → origin manual/auto
   asr.py         — lazy faster-whisper fallback (WhisperModel small/int8, vad_filter); интерфейс segments(start,duration,text)
   formats.py     — свои сериализаторы SRT/VTT (таймкоды HH:MM:SS,mmm / HH:MM:SS.mmm совместимы с formatters); TXT/MD читаемый (группировка по паузам >2с / ~800 символов в абзац)
-  outputs.py     — <out>/<slug>_<id>/meta.json + transcript.{srt,vtt,json,txt,md}; index.json {_type, entries, failed}; ошибки — в entries[].error + stderr
+  outputs.py     — <out>/<slug>_<id>/meta.json + transcript.{srt,vtt,json,txt,md,jsonl,csv}; index.json {_type, entries, failed}; ошибки — в entries[].error + stderr
 tests/           — stubs yt-dlp/transcript/whisper, без сети (M5: XDG temp, PATH stubs, no network)
 ```
 
@@ -22,7 +22,7 @@ tests/           — stubs yt-dlp/transcript/whisper, без сети (M5: XDG t
 1. `inputs.parse(args)` → `jobs: list[VideoJob{id, source}]` (playlist → flat extract → expand, full extract per video).
 2. `metadata.get(job)` → dict (title, channel, duration, upload_date, view/like, description, chapters, thumbnails, tags, subtitles list).
 3. `transcript.get(video_id, langs)` → segments + origin {manual|auto|whisper|none}.
-4. `formats.*` → 5 файлов. Нет субтитров → `asr.transcribe(audio via yt-dlp bestaudio tmp)` или понятная ошибка + инструкция.
+4. `formats.*` → 7 файлов. Нет субтитров → `asr.transcribe(audio via yt-dlp bestaudio tmp)` или понятная ошибка + инструкция.
 5. `outputs.write()` → папки + `index.json {_type, entries, failed}`. Частичные ошибки: exit 1, остальные готовы.
 
 ## Ключевые решения
@@ -31,7 +31,7 @@ tests/           — stubs yt-dlp/transcript/whisper, без сети (M5: XDG t
 - Читаемый текст: склейка сегментов, разбивка на абзацы по паузе/д Schlange, MD с header (title/channel/date/origin) + главы если есть.
 - Whisper — опциональный extra, lazy import, временное аудио чистится.
 - Свои сериализаторы SRT/VTT вместо youtube_transcript_api.formatters: форматтерам нужны FetchedTranscript-объекты, а у нас плоские dict-сегменты {text, start, duration}; таймкоды совпадают.
-- Сеть только в `metadata`/`transcript`/`asr` + `cli.expand_playlist` (flat extract оглавления); тесты мокают.
+- Сеть только в `metadata`/`transcript`/`asr` + `cli.expand_playlist` (flat extract оглавления) + `outputs.fetch_thumbnail` (обложки, волна 7); тесты мокают.
 - Дедуп входов по ключу (video_id или url) с сохранением порядка; мусорные токены — error-entries, batch идёт дальше (только мусор → exit 2 без index).
 - Запись атомарная: `*.tmp` + `os.replace` для meta.json/transcript.*/index.json.
 - Отчёт обогащён: `meta.json` — transcript_lang, fetched_at (UTC ISO), tool_version, asr_model (при origin whisper); `index.json` — playlist_url + transcript_lang в entries.
@@ -39,7 +39,7 @@ tests/           — stubs yt-dlp/transcript/whisper, без сети (M5: XDG t
 ## v0.2 Волна 1 (HTML + статистика, аддитивно)
 - **stats.py** — `compute_stats(segments, duration_sec, top_n=10) -> {words, chars, reading_time_min (words/180), speaking_wpm (words/span_min по сегментам, None без спанов), top_keywords (TF по `[a-zа-яё]{3,}`, стоп-слова ru/en встроены)}`. Только stdlib.
 - **report.py** — `render_report(meta, segments, stats, origin)` (один HTML: meta charset, встроенные style/script, главы `youtu.be/{id}?t=`, реплики `watch?v={id}&t={s}s`, поиск с подсветкой, escape) и `render_index(entries_info, corpus)` (таблица + сводка). Всё на русском.
-- **outputs.py** — `write_video` всегда пишет `report.html` + `stats` в `meta.json`; `write_index` всегда пишет `index.html` рядом с `index.json` (ссылки `dir/report.html`). 5 форматов не менялись.
+- **outputs.py** — `write_video` всегда пишет `report.html` + `stats` в `meta.json`; `write_index` всегда пишет `index.html` рядом с `index.json` (ссылки `dir/report.html`). 7 форматов (`srt,vtt,json,txt,md,jsonl,csv`).
 - **formats.py `to_md`** — в шапку добавлены строки слов/времени чтения/топ-3 (сигнатура та же).
 
 ## v0.2 Волна 2 (поиск + serve + скорость, аддитивно)
@@ -118,3 +118,4 @@ tests/           — stubs yt-dlp/transcript/whisper, без сети (M5: XDG t
   (`thumbnail_file: null`), `paths["thumb"]` при успехе; ready-критерий
   не менялся (обложка опциональна).
 - `report.render_report`: `<img src="thumbnail.jpg">` при наличии файла.
+- **Limitation (info):** скачивание обложки — timeout 20 с/видео в воркере пула batch (остальные видео не блокируются); флага `--no-thumb` нет — обложка всегда best-effort.
