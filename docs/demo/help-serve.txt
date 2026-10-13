@@ -1,4 +1,5 @@
-usage: kw-yt serve [-h] [--port N] [--color {auto,always,never}] [--no-color]
+usage: kw-yt serve [-h] [--port N] [--host HOST] [--color {auto,always,never}]
+                   [--no-color]
                    [directory]
 
 Раздавать готовый корпус (index.html/report.html) по HTTP.
@@ -10,6 +11,8 @@ positional arguments:
 options:
   -h, --help            show this help message and exit
   --port N              Порт (по умолчанию 8000, 0 — выбрать автоматически).
+  --host HOST           Хост (по умолчанию 127.0.0.1 — только локально;
+                        0.0.0.0 — виден всей локальной сети).
   --color {auto,always,never}
                         Цвета в выводе: auto (по TTY), always, never (по
                         умолчанию auto).

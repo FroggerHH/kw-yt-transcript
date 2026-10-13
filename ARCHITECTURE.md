@@ -189,3 +189,11 @@ tests/           — stubs yt-dlp/transcript/whisper, без сети (M5: XDG t
   локалок в sections/report, `assert isinstance` после `type()`-гарда в export
   (bool по-прежнему отсекается `type()`), переименование `item→entry` в
   resume-цикле cli (mypy склеивал тип счётчика с первым `for item` по dict).
+
+## v0.2 Волна 25 (serve --host, аддитивно)
+- `serve.serve_dir(root, port, host="127.0.0.1")` / `make_server(..., host)`:
+  бинд на host, URL печатает host; не-loopback host (всё кроме
+  `127.0.0.1`/`localhost`/`::1`) — русское предупреждение в stderr
+  «сервер виден всей локальной сети» (без автоопределения LAN-IP).
+- CLI `--host HOST` в serve-парсере (дефолт 127.0.0.1); валидация через
+  `socket.getaddrinfo` до бинда (мусор → exit 2).

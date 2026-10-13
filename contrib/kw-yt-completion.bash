@@ -19,7 +19,7 @@ _kw_yt() {
             COMPREPLY=( $(compgen -W "always auto never" -- "$cur") )
             return 0
             ;;
-        --context|--from|--from-file|--in|--jobs|--langs|--limit|--older-than|--out|--port|--summary|--to|--whisper-model|-j|-o)
+        --context|--from|--from-file|--host|--in|--jobs|--langs|--limit|--older-than|--out|--port|--summary|--to|--whisper-model|-j|-o)
             return 0
             ;;
     esac
@@ -46,7 +46,7 @@ _kw_yt() {
             return 0
             ;;
         serve)
-            COMPREPLY=( $(compgen -W "--color --help --no-color --port -h" -- "$cur") )
+            COMPREPLY=( $(compgen -W "--color --help --host --no-color --port -h" -- "$cur") )
             return 0
             ;;
         stats)

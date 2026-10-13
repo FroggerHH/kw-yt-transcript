@@ -4,7 +4,7 @@ import threading
 import urllib.request
 
 from kw_yt_transcript import cli as cli_mod
-from kw_yt_transcript.serve import make_server, serve_dir
+from kw_yt_transcript.serve import DEFAULT_HOST, make_server, serve_dir
 
 
 def test_live_get_index_200(tmp_path):
@@ -78,3 +78,89 @@ def test_cli_serve_bad_port_exit_2(tmp_path):
 
 def test_cli_serve_missing_dir_exit_2(tmp_path):
     assert cli_mod.main(["serve", str(tmp_path / "нет")]) == 2
+
+
+def test_make_server_binds_host_and_serves_loopback(tmp_path):
+    assert DEFAULT_HOST == "127.0.0.1"
+    root = tmp_path / "out"
+    root.mkdir()
+    marker = "host-маркер-67890"
+    (root / "index.html").write_text(f"<html><body>{marker}</body></html>", "utf-8")
+    server = make_server(root, 0, "0.0.0.0")
+    assert server.server_address[0] == "0.0.0.0"
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        port = server.server_address[1]
+        assert port != 0
+        with urllib.request.urlopen(f"http://127.0.0.1:{port}/", timeout=5) as resp:
+            assert resp.status == 200
+            assert marker in resp.read().decode("utf-8")
+    finally:
+        server.shutdown()
+        thread.join(timeout=5)
+        server.server_close()
+
+
+class _FakeHostServer:
+    def __init__(self, host, port):
+        self.server_address = (host, port)
+
+    def serve_forever(self):
+        raise KeyboardInterrupt
+
+    def server_close(self):
+        pass
+
+
+def test_serve_dir_warns_on_lan_host(tmp_path, monkeypatch, capsys):
+    seen = {}
+
+    def fake_make(root, port=0, host="127.0.0.1"):
+        seen["host"] = host
+        return _FakeHostServer(host, port)
+
+    monkeypatch.setattr("kw_yt_transcript.serve.make_server", fake_make)
+    assert serve_dir(tmp_path, 8124, "0.0.0.0") == 0
+    assert seen["host"] == "0.0.0.0"
+    res = capsys.readouterr()
+    assert "http://0.0.0.0:8124/" in res.out
+    assert "виден всей локальной сети" in res.err
+
+
+def test_serve_dir_no_warning_on_loopback(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(
+        "kw_yt_transcript.serve.make_server",
+        lambda root, port=0, host="127.0.0.1": _FakeHostServer(host, port),
+    )
+    assert serve_dir(tmp_path, 8125) == 0
+    res = capsys.readouterr()
+    assert "http://127.0.0.1:8125/" in res.out
+    assert "локальной сети" not in res.err
+
+
+def test_cli_serve_bad_host_exit_2_no_bind(tmp_path, monkeypatch, capsys):
+    def boom(*a, **k):
+        raise AssertionError("bind не должен вызываться при мусорном host")
+
+    monkeypatch.setattr("kw_yt_transcript.serve.make_server", boom)
+    assert cli_mod.main(["serve", str(tmp_path), "--host", "!!!"]) == 2
+    assert cli_mod.main(["serve", str(tmp_path), "--host", ""]) == 2
+    res = capsys.readouterr()
+    assert "host" in res.err
+
+
+def test_cli_serve_host_passthrough(tmp_path, monkeypatch, capsys):
+    seen = {}
+
+    def fake_make(root, port=0, host="127.0.0.1"):
+        seen.update(host=host, port=port)
+        return _FakeHostServer(host, port)
+
+    monkeypatch.setattr("kw_yt_transcript.serve.make_server", fake_make)
+    assert cli_mod.main(["serve", str(tmp_path), "--host", "0.0.0.0"]) == 0
+    assert seen["host"] == "0.0.0.0"
+    capsys.readouterr()
+    assert cli_mod.main(["serve", str(tmp_path)]) == 0
+    assert seen["host"] == "127.0.0.1"
+    capsys.readouterr()

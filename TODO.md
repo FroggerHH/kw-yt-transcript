@@ -168,5 +168,17 @@
 - Принято: A.meta/index enrichment (transcript_lang, fetched_at, tool_version, asr_model, playlist_url); B.дедуп входов; C.атомарная запись; D.нормализация langs; E.мусор→partial entries exit 1; F.hint_id упавших + счёт пропущенных плейлиста; G.ранняя валидация опций/файла; H.русские hints missing-deps + ffmpeg-preflight; I.stderr-консистентность + пустой from-file→index + readonly-тест; J.ruff select + тесты пробелов.
 - Rejected: resume-skip готовых папок (меняет семантику без флага); _VIDEO_ID_RE dedup (решено в round1 п.13); новые флаги; перевод/Data API/TUI.
 
+## Волна 25: serve --host (LAN) [x] (done 18:22, 251 passed, fix-4)
+- [x] serve_dir(root, port, host=127.0.0.1); cli --host (getaddrinfo-валидация, exit 2); не-loopback → LAN-предупреждение
+- [x] tests +5 (бинд 0.0.0.0, warning, мусор/пусто, passthrough); README(EN)/completion/demo/ARCH; Gates + live smoke 200
+
+## Волна 26: kw-yt update [ ] (queued, ПОСЛЕ волны 25 — трогает cli.py)
+- [ ] update.py: детект установки (pipx-venv / uv-tools / pip-site / source-checkout по .git / system) + свежая версия (raw pyproject с GitHub main через tomllib) + `--check` (только показать) и полный режим (переустановка из GitHub: pipx/uv/pip reinstall, source → git pull --ff-only; всё через явные сабпроцессы с русскими ошибками)
+- [ ] cli update (+--check), exit-коды (0 ok/уже свежее, 1 ошибка), tests (стабы сабпроцессов/сети/файлов, без реальных установок), README(EN)/completion/ARCH
+- [ ] Gates: pytest зелёный, ruff чисто; live: `kw-yt update --check` на реальной установке (только чтение, без изменений)
+- [ ] serve_mod.serve_dir(root, port, host="127.0.0.1"); cli `--host HOST` (валидация IP/имени, иначе exit 2); не-loopback → предупреждение в stderr (виден всей LAN)
+- [ ] tests: 127.0.0.1 GET 200 как раньше; --host 0.0.0.0 биндится (GET через 127.0.0.1); warning на 0.0.0.0; мусорный host → exit 2
+- [ ] README(EN)/completion/test_readme-маркеры (--host); Gates: pytest зелёный, ruff чисто, live: serve --host 0.0.0.0 → 200
+
 ## Future backlog (не делаем)
 - Перевод транскрипта, YouTube Data API v3, TUI/Web — причины в SPEC non-goals.

@@ -216,9 +216,10 @@ The `--color` flag exists on all subcommands.
 
 Output: groups per video with direct-hit counts, exit 0 (found) / 1 (not found).
 
-`kw-yt serve [DIR] [--port N]` (default library, port `8000`, `0` — auto):
+`kw-yt serve [DIR] [--port N] [--host HOST]` (default library, port `8000`, `0` — auto, host `127.0.0.1`):
 serves the finished corpus (`index.html`/`report.html`) on `127.0.0.1`, exit with Ctrl+C.
 No `index.html` in the folder — warning, keeps serving (directory listing).
+A non-loopback host (`--host 0.0.0.0`) exposes the server to the whole LAN (Russian warning on stderr).
 
 `kw-yt export` — merges all `*/transcript.json` of the corpus into one file:
 

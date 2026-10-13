@@ -15,6 +15,7 @@ import argparse
 import json
 import os
 import re
+import socket
 import sys
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -334,6 +335,13 @@ def build_serve_parser() -> argparse.ArgumentParser:
         metavar="N",
         default=None,
         help="Порт (по умолчанию 8000, 0 — выбрать автоматически).",
+    )
+    p.add_argument(
+        "--host",
+        metavar="HOST",
+        default=None,
+        help="Хост (по умолчанию 127.0.0.1 — только локально; "
+        "0.0.0.0 — виден всей локальной сети).",
     )
     _add_color_args(p)
     return p
@@ -1070,7 +1078,16 @@ def _main_serve(argv: list[str]) -> int:
     if not (0 <= port <= 65535):
         _error(f"--port должен быть от 0 до 65535, получено {args.port!r}.")
         return 2
-    return serve_mod.serve_dir(root, port)
+    host = "127.0.0.1" if args.host is None else str(args.host).strip()
+    if not host:
+        _error("--host не должен быть пустым.")
+        return 2
+    try:
+        socket.getaddrinfo(host, port)
+    except (OSError, UnicodeError):
+        _error(f"непонятный host {args.host!r}: не резолвится.")
+        return 2
+    return serve_mod.serve_dir(root, port, host)
 
 
 def _main_export(argv: list[str]) -> int:

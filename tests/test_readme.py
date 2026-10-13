@@ -54,6 +54,7 @@ def test_readme_required_sections():
         "--context",
         "--limit",
         "--port",
+        "--host",
         "--summary",
         "--no-summary",
         "--json",
@@ -185,6 +186,7 @@ def test_readme_en_exists_and_matches():
         "Contributing",
         "--color",
         "completion",
+        "--host",
         "docs/demo/",
         "SKILL.md",
     ):
