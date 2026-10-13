@@ -260,3 +260,54 @@ def test_no_thumbnails_no_download_attempt(tmp_path):
 
     write_video(tmp_path, meta(), segments(), "manual", thumb_opener=opener)
     assert calls == []
+
+
+def test_write_index_entries_carry_thumbnail_file(tmp_path):
+    def opener(url, timeout):
+        return b"FAKEJPEG"
+
+    paths = write_video(tmp_path, _meta_with_thumbs(), segments(), "manual", thumb_opener=opener)
+    dirname = Path(paths["dir"]).name
+    results = [
+        {
+            "meta": meta(),
+            "dir": dirname,
+            "origin": "manual",
+            "transcript_lang": "ru",
+            "error": None,
+        },
+        {
+            "meta": None,
+            "dir": None,
+            "origin": None,
+            "transcript_lang": None,
+            "error": "Не удалось получить метаданные",
+        },
+    ]
+    index_path = write_index(tmp_path, results)
+    index = json.loads(index_path.read_text(encoding="utf-8"))
+    assert index["entries"][0]["thumbnail_file"] == "thumbnail.jpg"
+    assert index["entries"][1]["thumbnail_file"] is None
+    body = (tmp_path / "index.html").read_text(encoding="utf-8")
+    assert f'{dirname}/thumbnail.jpg' in body
+    assert 'loading="lazy"' in body
+
+
+def test_write_index_without_thumbs_no_img(tmp_path):
+    paths = write_video(tmp_path, meta(), segments(), "manual")
+    dirname = Path(paths["dir"]).name
+    results = [
+        {
+            "meta": meta(),
+            "dir": dirname,
+            "origin": "manual",
+            "transcript_lang": "ru",
+            "error": None,
+        }
+    ]
+    index_path = write_index(tmp_path, results)
+    index = json.loads(index_path.read_text(encoding="utf-8"))
+    assert index["entries"][0]["thumbnail_file"] is None
+    body = (tmp_path / "index.html").read_text(encoding="utf-8")
+    assert "<img" not in body
+    assert "<table>" in body

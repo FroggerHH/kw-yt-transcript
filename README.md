@@ -174,7 +174,7 @@ whisper_model = "small"
 ```
 out/
   index.json                        # сводка batch: {_type, playlist_url, entries, failed}
-  index.html                        # тот же список таблицей + сводка корпуса
+  index.html                        # тот же список таблицей + сводка корпуса (с миниатюрами thumbnail.jpg, lazy)
   testovoe-video_dQw4w9WgXcQ/       # <slug>_<video_id>/
     meta.json                       # метаданные + origin + stats
     thumbnail.jpg                   # обложка (best-effort: если не скачалась — её нет, остальное пишется)

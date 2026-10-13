@@ -200,8 +200,15 @@ def render_index(
         words = e.get("words", "—")
         origin = _origin_label(e.get("origin"))
         href = f"{html.escape(d, quote=True)}/report.html" if d else "#"
+        thumb = ""
+        thumb_file = e.get("thumbnail_file")
+        if d and isinstance(thumb_file, str) and thumb_file:
+            src = f"{html.escape(d, quote=True)}/{html.escape(thumb_file, quote=True)}"
+            thumb = (
+                f'<img src="{src}" loading="lazy" alt="" style="width:120px">'
+            )
         rows.append(
-            f"<tr><td><a href=\"{href}\">{html.escape(title, quote=False)}</a></td>"
+            f"<tr><td>{thumb}<a href=\"{href}\">{html.escape(title, quote=False)}</a></td>"
             f"<td>{html.escape(author, quote=False)}</td>"
             f"<td>{_mmss(dur)}</td>"
             f"<td>{html.escape(str(words), quote=False)}</td>"

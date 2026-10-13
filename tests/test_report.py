@@ -83,3 +83,51 @@ def test_index_table_and_links():
     assert "video-odin_id1/report.html" in html
     assert "<table>" in html and "Видео один" in html
     assert "Всего видео: 1" in html
+
+
+def test_index_gallery_thumbnails():
+    entries = [
+        {
+            "title": "Видео один",
+            "video_id": "id1",
+            "dir": "video-odin_id1",
+            "author": "Автор",
+            "duration": 100,
+            "words": 50,
+            "origin": "manual",
+            "thumbnail_file": "thumbnail.jpg",
+        },
+        {
+            "title": "Видео два",
+            "video_id": "id2",
+            "dir": "video-dva_id2",
+            "author": "Автор",
+            "duration": 200,
+            "words": 70,
+            "origin": "auto",
+            "thumbnail_file": None,
+        },
+    ]
+    html = render_index(entries, {"n_videos": 2, "total_words": 120, "total_min": 5.0})
+    assert '<img src="video-odin_id1/thumbnail.jpg" loading="lazy"' in html
+    assert "width:120px" in html
+    assert html.count("<img") == 1
+    assert "<table>" in html and "Видео два" in html
+
+
+def test_index_without_thumbnails_no_img():
+    entries = [
+        {
+            "title": "Видео <один>",
+            "video_id": "id1",
+            "dir": "video-odin_id1",
+            "author": "Автор",
+            "duration": 100,
+            "words": 50,
+            "origin": "manual",
+        }
+    ]
+    html = render_index(entries, {"n_videos": 1, "total_words": 50, "total_min": 1.7})
+    assert "<img" not in html
+    assert "<table>" in html
+    assert "Видео &lt;один&gt;" in html

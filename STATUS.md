@@ -12,7 +12,8 @@
 - [x] export.py (collect/export_corpus/write_summary, jsonl+csv, skipped, атомарно) + tests/test_export.py (6)
 - [x] cli export (--in/--format/--out/--summary/--no-summary, exit 0/1/2) + README + test_readme (парсер в union, маркеры)
 - [x] Gates: pytest 169, ruff clean, export --help exit 0; live: 1 видео/61 реплика/487 слов, summary ok
-- [x] Финал review волн 6–7 (ora-3 → fix-3): fix-list без блокеров отработан (span, минуты, CHANGELOG 176, ARCH 7 файлов+сеть, SPEC 15, README thumbnail_file, честная изоляция). Gates: 176 passed, ruff clean.
+- [x] Волна 8 (fix-3): галерея обложек в index.html (img 120px lazy, entries thumbnail_file, index.json совместим). Gates: 180 passed, ruff clean, live img в index.
+- [ ] Review волны 8 + done v0.2: коммит ниже, затем финальный отчёт.
 - [x] Done v0.2 (16:34 MSK, до дедлайна 17:31): коммит ниже, дерево чистое. Live-доказательства: single→9 файлов exit 0, report.html 33 ссылки, search 38–57 хитов, serve 200, export 61/487, stats таблица+JSON, thumbnail.jpg.
 - [x] Волна 6 (оркестратор): `kw-yt stats` (summarize + таблица/JSON, exit 0/1/2). Gates: 173 passed, ruff clean, live таблица+JSON ok.
 - [x] Волна 7 (оркестратор): thumbnails (fetch best-effort + <img> в report). Gates: 176 passed, ruff clean, live thumbnail.jpg + meta + report exit 0. Изоляция обложек: pop thumbnails в helper + stub-opener (fixture info.json URL содержит — честно).

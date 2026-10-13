@@ -265,6 +265,7 @@ def write_index(
     :param playlist_url: задан -> _type 'playlist', иначе 'batch'.
     """
     entries = []
+    base = Path(out_dir)
     for r in results:
         meta = r.get("meta") or {}
         entries.append(
@@ -274,6 +275,7 @@ def write_index(
                 "dir": r.get("dir"),
                 "origin": r.get("origin"),
                 "transcript_lang": r.get("transcript_lang"),
+                "thumbnail_file": _entry_thumb(base, r.get("dir")),
                 "error": r.get("error"),
             }
         )
@@ -292,6 +294,18 @@ def write_index(
     except Exception:
         pass
     return index_path
+
+
+def _entry_thumb(out_dir: Path, dirname: str | None) -> str | None:
+    """Прочитать thumbnail_file из <out>/<dir>/meta.json; нет файла -> None."""
+    if not dirname:
+        return None
+    try:
+        record = json.loads((out_dir / dirname / "meta.json").read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    thumb = record.get("thumbnail_file") if isinstance(record, dict) else None
+    return thumb if isinstance(thumb, str) and thumb else None
 
 
 def _entry_stats(out_dir: Path, dirname: str | None) -> tuple[Any, Any]:
@@ -341,6 +355,7 @@ def _write_index_html(out_dir: Path, results: list[dict[str, Any]]) -> None:
                 "duration": duration,
                 "words": words,
                 "origin": r.get("origin"),
+                "thumbnail_file": _entry_thumb(out_dir, dirname),
             }
         )
     corpus = {"n_videos": ok, "total_words": total_words, "total_min": total_sec / 60.0}
