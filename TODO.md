@@ -26,7 +26,8 @@
 - [x] Exhaustion fix (fix-1): A–J внедрены, 100 passed (72+28), ruff E/F/W/I/UP чист.
 - [x] Packaging smoke: clean venv pip install . → kw-yt 0.1.0, --help exit 0, pip check чисто.
 - [x] Live end-to-end: Never Gonna Give You Up → exit 0, 6 файлов, origin manual lang en, индекс ok (evidence в STATUS).
-- [ ] Oracle-review раунд 4 (final, background): zero-new-items подтверждение. Затем done check C5.
+- [x] Oracle-review раунд 4 (final, ora-1): nothing actionable (третий consecutive clean).
+- [x] Done check C5: все acceptance SPEC — с доказательствами (см. STATUS Exhaustion reached).
 - Принято: A.meta/index enrichment (transcript_lang, fetched_at, tool_version, asr_model, playlist_url); B.дедуп входов; C.атомарная запись; D.нормализация langs; E.мусор→partial entries exit 1; F.hint_id упавших + счёт пропущенных плейлиста; G.ранняя валидация опций/файла; H.русские hints missing-deps + ffmpeg-preflight; I.stderr-консистентность + пустой from-file→index + readonly-тест; J.ruff select + тесты пробелов.
 - Rejected: resume-skip готовых папок (меняет семантику без флага); _VIDEO_ID_RE dedup (решено в round1 п.13); новые флаги; перевод/Data API/TUI.
 

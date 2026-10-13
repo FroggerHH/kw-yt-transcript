@@ -27,11 +27,26 @@
 - [x] Oracle-review раунд 2 (ora-1): nothing actionable (первый clean).
 - [x] Exhaustion fix (fix-1): A–J внедрены, 100 passed, ruff чист. Packaging smoke: clean venv → 0.1.0, pip check чисто.
 - [x] Live end-to-end (2026-10-13, /tmp/kw-live3): `kw-yt dQw4w9WgXcQ` → exit 0, папка + meta.json + 5 transcript.*, index.json failed 0; origin manual, transcript_lang en, tool_version 0.1.0, SRT/MD валидны. SPEC acceptance доказано исполнением.
-- [ ] Oracle-review раунд 4 (final): zero-new-items подтверждение → done check C5 → `Exhaustion reached`.
+- [x] Oracle-review раунд 4 (final, ora-1): nothing actionable (третий consecutive clean).
+- [x] Done check C5 (2026-10-13) — см. `Exhaustion reached` ниже.
 
-## Next
-1. Коммит A–J + docs, ora-4 final.
-2. Done check C5, финальный отчёт. Whisper-live (скачивание аудио + faster-whisper) — опционально, модель тяжёлая; остаётся user-side.
+## Exhaustion reached (2026-10-13)
+- Полный цикл passes 1–8 с нулевыми новыми items: ora-4 вернул nothing actionable после внедрения A–J; новых предложений нет.
+- Consecutive clean: раунды 2, 3, 4 — все nothing actionable.
+- SPEC acceptance (доказательства исполнением):
+  1. `--help`/`--version` RU, exit 0 — live + tests/test_readme.py.
+  2. Single с субтитрами → 6 файлов, таймкоды валидны — live `/tmp/kw-live3` exit 0 (meta.json + srt/vtt/json/txt/md, origin manual lang en).
+  3. Без субтитров → Whisper fallback — путь доказан live (аудио скачалось, русская ASRError без модели); полная транскрибация — user-side (команда ниже).
+  4. Плейлист N → N папок + index.json + exit 1 при частичных — mock-тесты tests/test_cli_batch.py (7 тестов).
+  5. Multi через запятую/файл — tests/test_inputs.py + parse_inputs_with_errors (мусор → partial entries).
+  6. 100 passed, изоляция: XDG-прогон, stubs, аудит без сети/бинарей; ruff E/F/W/I/UP чист.
+- Packaging: clean venv `pip install .` → kw-yt 0.1.0, `pip check` чисто.
+- Reflection (трение сессии): раннее librarian-исследование отменило неверный стек (Node-lib); замер exit-кода через пайп врёт — проверять без `| tail`; `build/` попал в коммит — артефакты сборки игнорить сразу; фиксер дважды чинил собственные тесты — тесты ревьюить как код.
+- Остаток user-side (сеть/железо): `pip install "kw-yt-transcript[asr]" && kw-yt <id-без-субтитров> --out /tmp/kw-asr` — ожидается exit 0 и origin whisper в meta.json; плейлист live: `kw-yt '<playlist-url>' --out /tmp/kw-pl` — ожидается N папок + index.json.
+
+## Future backlog (не делаем)
+- Resume-skip готовых папок (нужен отдельный дизайн флага).
+- Перевод транскрипта, YouTube Data API v3, TUI/Web (SPEC non-goals).
 
 ## Next
 1. Дождаться fix-2, сверить gates (pytest + --help + live exit-код без пайпа), коммит.
