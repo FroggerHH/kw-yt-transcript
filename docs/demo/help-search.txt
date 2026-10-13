@@ -1,0 +1,21 @@
+usage: kw-yt search [-h] [--in ПАПКА] [--context СЕК] [--limit N]
+                    [--color {auto,always,never}] [--no-color]
+                    query [query ...]
+
+Поиск по сохранённым транскриптам корпуса.
+
+positional arguments:
+  query                 Запрос (несколько слов — в кавычках или без).
+
+options:
+  -h, --help            show this help message and exit
+  --in ПАПКА            Корень корпуса (по умолчанию библиотека или из
+                        конфига).
+  --context СЕК         Контекст: соседние реплики в ±секундах (по умолчанию
+                        15).
+  --limit N             Максимум видео в выдаче (по умолчанию 20).
+  --color {auto,always,never}
+                        Цвета в выводе: auto (по TTY), always, never (по
+                        умолчанию auto).
+  --no-color            Отключить цвета в выводе (то же, что --color never /
+                        NO_COLOR=1).

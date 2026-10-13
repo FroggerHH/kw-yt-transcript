@@ -85,6 +85,12 @@ def test_readme_required_sections():
         "report.html",
         "index.html",
         "config.toml",
+        "--color",
+        "kw-yt completion",
+        "docs/demo/",
+        "Быстрый старт",
+        "Участие в разработке",
+        "SKILL.md",
     ):
         assert section in text, section
 
@@ -95,8 +101,17 @@ def test_completion_script_exists_and_covers_cli():
     text = comp.read_text(encoding="utf-8")
     assert "complete -F _kw_yt kw-yt" in text
     for token in (
-        "search", "serve", "export", "stats", "--jobs", "--resume", "--format",
-        "jsonl", "csv", "--no-summary", "--json",
+        "search",
+        "serve",
+        "export",
+        "stats",
+        "--jobs",
+        "--resume",
+        "--format",
+        "jsonl",
+        "csv",
+        "--no-summary",
+        "--json",
     ):
         assert token in text, token
 
@@ -166,6 +181,12 @@ def test_readme_en_exists_and_matches():
         "kw-yt search",
         "transcript.srt",
         "0.2.0",
+        "Quick start",
+        "Contributing",
+        "--color",
+        "completion",
+        "docs/demo/",
+        "SKILL.md",
     ):
         assert marker in en, marker
 
@@ -183,3 +204,61 @@ def test_graceful_usage_errors_without_network():
     assert cli_mod.main([]) == 2
     assert cli_mod.main(["!!!"]) == 2
     assert cli_mod.main(["--from-file", "/nonexistent/links.txt"]) == 2
+
+
+DEMO = Path(__file__).parent.parent / "docs" / "demo"
+DEMO_CORPUS = "docs/demo/corpus"
+
+HELP_CAPTURES = {
+    "version.txt": ["--version"],
+    "help.txt": ["--help"],
+    "help-search.txt": ["search", "--help"],
+    "help-serve.txt": ["serve", "--help"],
+    "help-export.txt": ["export", "--help"],
+    "help-stats.txt": ["stats", "--help"],
+    "help-library.txt": ["library", "--help"],
+    "help-clean.txt": ["clean", "--help"],
+    "help-completion.txt": ["completion", "--help"],
+}
+
+
+def test_demo_help_captures_match_tool(monkeypatch, capsys):
+    """docs/demo/*.txt — вывод реального инструмента (COLUMNS зафиксированы)."""
+    assert DEMO.is_dir()
+    monkeypatch.setenv("COLUMNS", "80")
+    for name, argv in HELP_CAPTURES.items():
+        f = DEMO / name
+        assert f.is_file(), name
+        with pytest.raises(SystemExit) as e:
+            cli_mod.main(argv)
+        assert e.value.code == 0, name
+        assert f.read_text(encoding="utf-8") == capsys.readouterr().out, name
+
+
+def test_demo_corpus_offline_stats_search_export(monkeypatch, tmp_path, capsys):
+    """Демо-корпус: stats/search/export работают без сети, как в quick start."""
+    monkeypatch.chdir(Path(__file__).parent.parent)
+    assert cli_mod.main(["stats", "--in", DEMO_CORPUS]) == 0
+    stats_out = capsys.readouterr().out
+    assert "реплик 6" in stats_out
+    assert (DEMO / "quickstart-stats.txt").read_text(encoding="utf-8") == stats_out
+    assert cli_mod.main(["search", "привет", "--in", DEMO_CORPUS]) == 0
+    search_out = capsys.readouterr().out
+    assert "вхождений 2" in search_out
+    assert (DEMO / "quickstart-search.txt").read_text(encoding="utf-8") == search_out
+    assert cli_mod.main(["search", "zz-небывалое-слово", "--in", DEMO_CORPUS]) == 1
+    capsys.readouterr()
+    out = tmp_path / "corpus.jsonl"
+    assert cli_mod.main(["export", "--in", DEMO_CORPUS, "--out", str(out), "--no-summary"]) == 0
+    capsys.readouterr()
+    assert out.is_file() and "DEMOdemo011" in out.read_text(encoding="utf-8")
+
+
+def test_readme_quotes_demo_outputs():
+    """Quick start в README цитирует захваченные выводы дословно."""
+    ru = readme_text()
+    en = (Path(__file__).parent.parent / "README_EN.md").read_text(encoding="utf-8")
+    for name in ("quickstart-stats.txt", "quickstart-search.txt"):
+        captured = (DEMO / name).read_text(encoding="utf-8").strip()
+        assert captured in ru, name
+        assert captured in en, name

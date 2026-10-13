@@ -26,3 +26,8 @@
 - **Claim:** Утилита не требует API-ключа; файл `~/Рабочий стол/yt-api-key.txt` не читаем и не используем.
 - **Checked:** Архитектура (yt-dlp + youtube-transcript-api + faster-whisper) ключа не требует; пользователь явно предпочёл работу без ключа, файл упомянут лишь как запасной.
 - **Outcome:** accepted — ключ остаётся опциональным fallback на будущее (SPEC non-goals: Data API v3 опционально позже); секрет-файл нетронут.
+
+## D6: Публичность репозитория (accepted 2026-10-13)
+- **Claim:** Навык требует private по умолчанию, но пользователь явно приказал «make public» ради Wiki (ей нужен public/upgrade).
+- **Checked:** секрет-аудит перед открытием чист (только упоминание пути к ключу, без значений); `gh repo edit --visibility public --accept-visibility-change-consequences` → PUBLIC.
+- **Outcome:** accepted — отклонение от дефолта навыка по явному указанию пользователя, зафиксировано здесь.

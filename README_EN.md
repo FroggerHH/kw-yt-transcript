@@ -63,10 +63,50 @@ kw-yt --help
 kw-yt --version
 ```
 
-Bash completion (optional):
+Bash completion (optional) — generated from the code:
+
+```bash
+eval "$(kw-yt completion bash)"
+```
+
+The file `contrib/kw-yt-completion.bash` is a pinned snapshot of the same
+command's output (don't edit by hand, see `ARCHITECTURE.md`). Without eval:
 
 ```bash
 source contrib/kw-yt-completion.bash
+```
+
+## Quick start
+
+Everything below is real tool output, no network (synthetic demo corpus in
+`docs/demo/corpus`, captured outputs live in `docs/demo/`):
+
+```bash
+$ kw-yt --version
+kw-yt 0.2.0
+
+$ kw-yt stats --in docs/demo/corpus
+Корпус: docs/demo/corpus — видео 1, реплик 6, слов 48, минут 0.5.
+Источники: manual: 1. Языки: ru: 1.
+- Демо-видео (синтетический офлайн-корпус) [DEMOdemo011]: 6 реплик, 48 слов, 27.2 с.
+
+$ kw-yt search "привет" --in docs/demo/corpus
+Результаты поиска «привет»: видео 1, вхождений 2.
+
+Видео: Демо-видео (синтетический офлайн-корпус) [DEMOdemo011] — совпадений: 2
+  > 00:00 Привет! Это демонстрационный корпус для офлайн-проверки kw-yt.
+    00:04 Здесь лежат несколько реплик, чтобы показать поиск и статистику.
+  > 00:09 Поиск находит слово привет даже в середине предложения.
+    00:13 Статистика считает слова и минуты без единого запроса в сеть.
+    00:19 Экспорт склеивает такие реплики в единый файл для RAG.
+    00:24 Конец демонстрации, спасибо за внимание.
+```
+
+`docs/demo/` also holds `--help` outputs of all subcommands (`help*.txt`) —
+tests compare them against the real CLI. First real download (needs internet):
+
+```bash
+kw-yt dQw4w9WgXcQ --out ./out
 ```
 
 ## Usage
@@ -126,6 +166,9 @@ kw-yt library --json
 kw-yt clean dQw4w9WgXcQ
 kw-yt clean --older-than 30 --cache
 kw-yt clean --all --yes
+
+# Bash completion (generated from the code: all subcommands and flags)
+eval "$(kw-yt completion bash)"
 ```
 
 All options:
@@ -143,11 +186,14 @@ All options:
 | `--whisper-model MODEL` | `small` | faster-whisper model |
 | `--jobs, -j N` | `4` | parallel downloads (1–16, order in `index.json` is stable) |
 | `--resume` | off | skip videos whose folder is already finished (no network calls; playlist table of contents is still read over the network) |
+| `--color` | `auto` | colors: `auto` (by TTY), `always`, `never` |
 | `--version` | — | show version |
 
 Defaults of `--out`, `--langs`, `--whisper-model`, `--jobs` and `--in` (in all commands)
 come from the config file when the flag is not given (see "Config and cache").
-Colors: auto (TTY), `NO_COLOR=1` or `--no-color` disable them.
+Colors: `--color {auto,always,never}` (default `auto` — by TTY),
+`--no-color` is the same as `--color never`; priority: flag > `NO_COLOR` > TTY.
+The `--color` flag exists on all subcommands.
 
 `kw-yt search QUERY`:
 
@@ -184,6 +230,14 @@ Output: summary line on stdout, exit 0; empty corpus — error, exit 1; missing 
 | `--json` | off | JSON summary instead of a table (videos, lines, words, minutes, `by_origin`/`by_lang`) |
 
 Empty corpus — error, exit 1; missing folder — exit 2.
+
+`kw-yt completion [bash]` — prints bash completion to stdout (single source —
+the argparse parsers in `cli.py`; `contrib/kw-yt-completion.bash` is a pinned
+snapshot of the same command's output). One-line setup:
+
+```bash
+eval "$(kw-yt completion bash)"
+```
 
 ## Config and cache
 
@@ -291,7 +345,7 @@ kw-yt search never --in /tmp/kw-live --limit 3   # exit 0, groups with 00:43 Nev
 kw-yt serve /tmp/kw-live --port 8000            # http://127.0.0.1:8000, exit with Ctrl+C
 ```
 
-## Development
+## Contributing
 
 Current version: 0.2.0 (`kw-yt --version`).
 
@@ -299,5 +353,14 @@ Current version: 0.2.0 (`kw-yt --version`).
 uv sync                                            # environment from uv.lock
 uv run --locked --with pytest -- python -m pytest -q -p no:cacheprovider
 uvx ruff@0.14.5 check kw_yt_transcript tests        # lint (select E/F/W/I/UP in pyproject)
+uvx ruff@0.14.5 format --check kw_yt_transcript tests  # format
+uvx mypy@1.18.2 kw_yt_transcript --ignore-missing-imports --follow-imports=skip
 python -m kw_yt_transcript --help
 ```
+
+Rules: tests run without network (stubs in `tests/`; live YouTube runs are
+manual, see above); never edit `contrib/kw-yt-completion.bash` by hand —
+regenerate it with `kw-yt completion bash > contrib/kw-yt-completion.bash`;
+`docs/demo/*.txt` are captures of real output (`COLUMNS=80`), the quick start
+quotes them verbatim (checked by `tests/test_readme.py`); the agent skill lives
+in `SKILL.md`.

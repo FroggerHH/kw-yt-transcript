@@ -114,3 +114,68 @@ def test_progress_ok_colored_on_tty(monkeypatch, tmp_path, capsys):
     assert cli_mod.main(["dQw4w9WgXcQ", "-o", str(out)]) == 0
     err = capsys.readouterr().err
     assert ESC in err and "ok" in err
+
+
+def test_color_always_on_pipe(monkeypatch, capsys):
+    _plain(monkeypatch)
+    with pytest.raises(SystemExit) as e:
+        cli_mod.main(["--help", "--color", "always"])
+    assert e.value.code == 0
+    assert ESC in capsys.readouterr().out
+
+
+def test_color_always_beats_no_color_env(monkeypatch, capsys):
+    _plain(monkeypatch)
+    monkeypatch.setenv("NO_COLOR", "1")
+    with pytest.raises(SystemExit) as e:
+        cli_mod.main(["--help", "--color", "always"])
+    assert e.value.code == 0
+    assert ESC in capsys.readouterr().out
+
+
+def test_color_never_on_tty(monkeypatch, capsys):
+    _tty(monkeypatch)
+    with pytest.raises(SystemExit) as e:
+        cli_mod.main(["--help", "--color", "never"])
+    assert e.value.code == 0
+    assert ESC not in capsys.readouterr().out
+
+
+def test_color_equals_form(monkeypatch, capsys):
+    _plain(monkeypatch)
+    with pytest.raises(SystemExit) as e:
+        cli_mod.main(["--help", "--color=always"])
+    assert e.value.code == 0
+    assert ESC in capsys.readouterr().out
+
+
+def test_color_bad_value_exit_2(monkeypatch, capsys):
+    _plain(monkeypatch)
+    with pytest.raises(SystemExit) as e:
+        cli_mod.main(["--color", "rainbow", "dQw4w9WgXcQ"])
+    assert e.value.code == 2
+
+
+def test_color_flag_in_all_subcommand_parsers():
+    parsers = (
+        cli_mod.build_parser(),
+        cli_mod.build_search_parser(),
+        cli_mod.build_serve_parser(),
+        cli_mod.build_export_parser(),
+        cli_mod.build_stats_parser(),
+        cli_mod.build_library_parser(),
+        cli_mod.build_clean_parser(),
+        cli_mod.build_completion_parser(),
+    )
+    for p in parsers:
+        opts = {o for a in p._actions for o in a.option_strings}
+        assert "--color" in opts, p.prog
+        assert "--no-color" in opts, p.prog
+
+
+def test_no_color_flag_means_never_on_tty(monkeypatch, capsys):
+    _tty(monkeypatch)
+    with pytest.raises(SystemExit) as e:
+        cli_mod.main(["search", "--help", "--no-color"])
+    assert e.value.code == 0
+    assert ESC not in capsys.readouterr().out

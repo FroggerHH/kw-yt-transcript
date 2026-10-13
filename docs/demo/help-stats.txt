@@ -1,0 +1,15 @@
+usage: kw-yt stats [-h] [--in ПАПКА] [--json] [--color {auto,always,never}]
+                   [--no-color]
+
+Сводная статистика корпуса (без скачивания).
+
+options:
+  -h, --help            show this help message and exit
+  --in ПАПКА            Корень корпуса (по умолчанию библиотека или из
+                        конфига).
+  --json                Вывести сводку JSON вместо таблицы.
+  --color {auto,always,never}
+                        Цвета в выводе: auto (по TTY), always, never (по
+                        умолчанию auto).
+  --no-color            Отключить цвета в выводе (то же, что --color never /
+                        NO_COLOR=1).

@@ -160,3 +160,32 @@ tests/           — stubs yt-dlp/transcript/whisper, без сети (M5: XDG t
   (Whisper качает всё аудио — честно). Папка `<slug>_part{frm}-{to}_<id>`,
   `meta.section`, пометка «Фрагмент» в report; `find_ready(..., section_key)` —
   полный и фрагмент не матчат друг друга (slug без подчёркиваний).
+
+## v0.2 Волна 23 (навык + completion + --color + демо, аддитивно)
+- **SKILL.md** (корень, Agent Skills): frontmatter `name: kw-yt-transcript` +
+  `description` (транскрипты/корпус/RAG/поиск); инструкции — команды всех
+  субкоманд, exit-коды, форматы, библиотека-дефолт, без API-ключа,
+  origin-маркировка, `--from/--to`; покрытие проверяет `tests/test_skill.py`.
+- **completion из кода:** `cli.render_bash_completion()` генерирует скрипт из
+  argparse-парсеров (`_completion_parsers` — единственный источник: все
+  субкоманды search/serve/export/stats/library/clean/completion + флаги fetch
+  incl. `--no-color/--color/--from/--to/--jobs/--resume`; значения `--format`
+  и `--color` — из `choices` парсеров). `kw-yt completion [bash]` печатает его
+  в stdout; `contrib/kw-yt-completion.bash` — зафиксированный вывод той же
+  функции (регенерация: `kw-yt completion bash > contrib/...`, руками не
+  править; расхождение ловит `test_completion_matches_contrib`).
+- **--color:** `_COLOR_MODE` (`_init_color` по сырым argv: `--color X` /
+  `--color=X` / `--no-color`=never; мусор — auto, дальше отвергнет argparse).
+  Приоритет: флаг > NO_COLOR > TTY; `always` красит даже в pipe.
+  Флаг добавлен во все 8 парсеров через `_add_color_args` (completion тоже,
+  там игнорируется).
+- **docs/demo/:** захваты настоящего вывода без сети (`COLUMNS=80`):
+  `version.txt`, `help*.txt` всех подкоманд, `quickstart-*.txt` + синтетический
+  `corpus/` (1 видео, помечено демо). Quick start в README цитирует захваты
+  дословно (проверяет `test_readme_quotes_demo_outputs`).
+- **mypy:** чисто под
+  `uvx mypy@1.18.2 kw_yt_transcript --ignore-missing-imports --follow-imports=skip`
+  (пин как у ruff). Правки точечные (≤5 строк на ошибку): `Any`-аннотации
+  локалок в sections/report, `assert isinstance` после `type()`-гарда в export
+  (bool по-прежнему отсекается `type()`), переименование `item→entry` в
+  resume-цикле cli (mypy склеивал тип счётчика с первым `for item` по dict).

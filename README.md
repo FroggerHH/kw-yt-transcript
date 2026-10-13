@@ -17,6 +17,7 @@ English version: README_EN.md.
 - [Highlights](#highlights)
 - [Требования](#требования)
 - [Установка](#установка)
+- [Быстрый старт](#быстрый-старт)
 - [Использование](#использование)
 - [Конфиг и кэш](#конфиг-и-кэш)
 - [Выходная структура](#выходная-структура)
@@ -24,7 +25,7 @@ English version: README_EN.md.
 - [Библиотека и очистка](#библиотека-и-очистка)
 - [FAQ](#faq)
 - [Проверка на живом видео](#проверка-на-живом-видео-вручную-нужен-интернет)
-- [Разработка](#разработка)
+- [Участие в разработке](#участие-в-разработке)
 
 Что умеет:
 - одиночное видео по id или URL (включая `youtu.be`, `/shorts/`, `music.youtube.com`);
@@ -50,17 +51,19 @@ English version: README_EN.md.
 - **Скорость batch.** `--jobs 1–16` параллельно (порядок в `index.json` стабильный), `--resume` без повторной сети, кэш метаданных 24ч, конфиг-файл.
 - **Честная маркировка.** `origin` (`manual`/`auto`/`whisper`) + AI-предупреждения в отчётах, когда текст распознан машиной.
 
-Мини demo-сессия:
+Мини demo-сессия (офлайн, синтетический корпус `docs/demo/corpus`):
 
 ```bash
-$ kw-yt dQw4w9WgXcQ --out ./out
-[1/1] dQw4w9WgXcQ ... ok
-Готово: 1/1, ошибок: 0. Папка: out.
+$ kw-yt --version
+kw-yt 0.2.0
 
-$ kw-yt stats --in ./out
-Корпус: ./out — видео 1, реплик 61, слов 487, минут 3.5.
-Источники: manual: 1. Языки: en: 1.
+$ kw-yt stats --in docs/demo/corpus
+Корпус: docs/demo/corpus — видео 1, реплик 6, слов 48, минут 0.5.
+Источники: manual: 1. Языки: ru: 1.
+- Демо-видео (синтетический офлайн-корпус) [DEMOdemo011]: 6 реплик, 48 слов, 27.2 с.
 ```
+
+Полный разбор с поиском и экспортом — в «Быстром старте» ниже.
 
 ## Требования
 
@@ -102,10 +105,50 @@ kw-yt --help
 kw-yt --version
 ```
 
-Автодополнение bash (опционально):
+Автодополнение bash (опционально) — генерируется из кода:
+
+```bash
+eval "$(kw-yt completion bash)"
+```
+
+Файл `contrib/kw-yt-completion.bash` — зафиксированный вывод той же команды
+(руками не правится, см. `ARCHITECTURE.md`). Без eval:
 
 ```bash
 source contrib/kw-yt-completion.bash
+```
+
+## Быстрый старт
+
+Всё ниже — настоящий вывод инструмента, без сети (синтетический демо-корпус
+в `docs/demo/corpus`, захваты выводов — в `docs/demo/`):
+
+```bash
+$ kw-yt --version
+kw-yt 0.2.0
+
+$ kw-yt stats --in docs/demo/corpus
+Корпус: docs/demo/corpus — видео 1, реплик 6, слов 48, минут 0.5.
+Источники: manual: 1. Языки: ru: 1.
+- Демо-видео (синтетический офлайн-корпус) [DEMOdemo011]: 6 реплик, 48 слов, 27.2 с.
+
+$ kw-yt search "привет" --in docs/demo/corpus
+Результаты поиска «привет»: видео 1, вхождений 2.
+
+Видео: Демо-видео (синтетический офлайн-корпус) [DEMOdemo011] — совпадений: 2
+  > 00:00 Привет! Это демонстрационный корпус для офлайн-проверки kw-yt.
+    00:04 Здесь лежат несколько реплик, чтобы показать поиск и статистику.
+  > 00:09 Поиск находит слово привет даже в середине предложения.
+    00:13 Статистика считает слова и минуты без единого запроса в сеть.
+    00:19 Экспорт склеивает такие реплики в единый файл для RAG.
+    00:24 Конец демонстрации, спасибо за внимание.
+```
+
+В `docs/demo/` также лежат выводы `--help` всех подкоманд (`help*.txt`) —
+сверяются тестами с реальным CLI. Первое настоящее скачивание (нужен интернет):
+
+```bash
+kw-yt dQw4w9WgXcQ --out ./out
 ```
 
 ## Использование
@@ -165,6 +208,9 @@ kw-yt library --json
 kw-yt clean dQw4w9WgXcQ
 kw-yt clean --older-than 30 --cache
 kw-yt clean --all --yes
+
+# Bash-completion (генерация из кода, все субкоманды и флаги)
+eval "$(kw-yt completion bash)"
 ```
 
 Все опции:
@@ -182,11 +228,14 @@ kw-yt clean --all --yes
 | `--whisper-model МОДЕЛЬ` | `small` | модель faster-whisper |
 | `--jobs, -j N` | `4` | параллельных загрузок (1–16, порядок в `index.json` стабильный) |
 | `--resume` | выкл | пропускать видео, чья папка уже готова (сеть не вызывается; оглавление плейлиста всё равно читается по сети) |
+| `--color` | `auto` | цвета: `auto` (по TTY), `always`, `never` |
 | `--version` | — | показать версию |
 
 Дефолты `--out`, `--langs`, `--whisper-model`, `--jobs` и `--in` (во всех командах)
 берутся из конфига, если флаг не задан (см. «Конфиг и кэш»).
-Цвета: авто (TTY), `NO_COLOR=1` или `--no-color` отключают.
+Цвета: `--color {auto,always,never}` (по умолчанию `auto` — по TTY),
+`--no-color` — то же, что `--color never`; приоритет: флаг > `NO_COLOR` > TTY.
+Флаг `--color` есть у всех подкоманд.
 
 `kw-yt search ЗАПРОС`:
 
@@ -223,6 +272,14 @@ kw-yt clean --all --yes
 | `--json` | выкл | сводка JSON вместо таблицы (видео, реплики, слова, минуты, `by_origin`/`by_lang`) |
 
 Пустой корпус — ошибка, exit 1; нет папки — exit 2.
+
+`kw-yt completion [bash]` — печатает bash-completion в stdout (единственный
+источник — argparse-парсеры в `cli.py`; `contrib/kw-yt-completion.bash` —
+зафиксированный вывод той же команды). Подключение одной строкой:
+
+```bash
+eval "$(kw-yt completion bash)"
+```
 
 ## Конфиг и кэш
 
@@ -328,7 +385,8 @@ Whisper-fallback (нужен extra `asr` + системный `ffmpeg`): ауд�
 Это несовместимость faster-whisper 1.2.1 с PyAV ≥ 15 — `kw-yt` обходит её сам: декодирует аудио системным `ffmpeg` и передаёт модели готовые сэмплы. Дополнительно при пустом результате повтор идёт без VAD-фильтра (Silero режет музыку).
 
 **Как проверяется качество?**
-GitHub Actions: матрица Python 3.11–3.13, `uv sync --locked`, полный pytest без сети, `ruff check`. Бейдж — в шапке.
+GitHub Actions: матрица Python 3.11–3.14, `uv sync --locked`, полный pytest без сети,
+`ruff check`, `ruff format --check`, `mypy`. Бейдж — в шапке.
 
 **Работает на Windows/macOS?**
 Проверено на Linux. Пути кэша/конфига имеют fallback (`~/.cache`, `~/.config`), код на stdlib переносим, но вне Linux не проверялось — гарантий нет.
@@ -351,11 +409,19 @@ kw-yt search never --in /tmp/kw-live --limit 3   # exit 0, группы с 00:43
 kw-yt serve /tmp/kw-live --port 8000            # http://127.0.0.1:8000, выход Ctrl+C
 ```
 
-## Разработка
+## Участие в разработке
 
 ```bash
 uv sync                                            # окружение по uv.lock
 uv run --locked --with pytest -- python -m pytest -q -p no:cacheprovider
 uvx ruff@0.14.5 check kw_yt_transcript tests        # линт (select E/F/W/I/UP в pyproject)
+uvx ruff@0.14.5 format --check kw_yt_transcript tests  # формат
+uvx mypy@1.18.2 kw_yt_transcript --ignore-missing-imports --follow-imports=skip
 python -m kw_yt_transcript --help
 ```
+
+Правила: тесты без сети (стабы в `tests/`; живой прогон YouTube — вручную,
+см. выше); `contrib/kw-yt-completion.bash` руками не правится — только
+`kw-yt completion bash > contrib/kw-yt-completion.bash`; `docs/demo/*.txt` —
+захваты реального вывода (`COLUMNS=80`), quick start цитирует их дословно
+(проверяет `tests/test_readme.py`); агентский навык — `SKILL.md`.

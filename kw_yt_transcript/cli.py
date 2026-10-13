@@ -3,7 +3,8 @@
 Полный цикл: parse_inputs → get_metadata → get_transcript
 (или Whisper-fallback) → write_video + index.json.
 Субкоманды: `search` (поиск по корпусу), `serve` (просмотр корпуса),
-`export` (сводный файл корпуса + summary.json), `stats` (сводка корпуса).
+`export` (сводный файл корпуса + summary.json), `stats` (сводка корпуса),
+`library`/`clean` (собственное хранилище), `completion` (bash-completion).
 Иначе — старое fetch-поведение. Импорты yt-dlp/transcript/whisper — лениво,
 поэтому --help работает без сети и опциональных зависимостей.
 """
@@ -47,20 +48,56 @@ _JOBS_MIN, _JOBS_MAX = 1, 16
 #: ANSI-коды цвета (только stdlib, без зависимостей).
 _RED, _GREEN, _BOLD = "31", "32", "1"
 
-#: --no-color текущего прогона (выставляется в _init_color до parse_args,
-#: т.к. подсветка help происходит внутри argparse).
-_NO_COLOR = False
+#: --color текущего прогона (выставляется в _init_color до parse_args,
+#: т.к. подсветка help происходит внутри argparse). auto — как раньше
+#: (TTY + нет NO_COLOR/TERM=dumb); --no-color — то же, что never.
+_COLOR_MODE = "auto"
+
+#: Допустимые значения --color (единственный список для парсеров и completion).
+COLOR_MODES = ("auto", "always", "never")
 
 
 def _init_color(argv: list[str] | None) -> None:
-    """Запомнить --no-color из сырых аргументов (до parse_args)."""
-    global _NO_COLOR
-    _NO_COLOR = "--no-color" in list(argv or [])
+    """Запомнить --color/--no-color из сырых аргументов (до parse_args)."""
+    global _COLOR_MODE
+    mode = "auto"
+    args = list(argv or [])
+    i = 0
+    while i < len(args):
+        arg = args[i]
+        if arg == "--no-color":
+            mode = "never"
+        elif arg == "--color" and i + 1 < len(args):
+            if args[i + 1] in COLOR_MODES:
+                mode = args[i + 1]
+            i += 1
+        elif arg.startswith("--color="):
+            if arg.split("=", 1)[1] in COLOR_MODES:
+                mode = arg.split("=", 1)[1]
+        i += 1
+    _COLOR_MODE = mode
+
+
+def _add_color_args(p: argparse.ArgumentParser) -> None:
+    """Общие флаги цвета во все парсеры: --color + legacy --no-color."""
+    p.add_argument(
+        "--color",
+        choices=list(COLOR_MODES),
+        default="auto",
+        help="Цвета в выводе: auto (по TTY), always, never (по умолчанию auto).",
+    )
+    p.add_argument(
+        "--no-color",
+        action="store_true",
+        help="Отключить цвета в выводе (то же, что --color never / NO_COLOR=1).",
+    )
 
 
 def _supports_color(file=None) -> bool:
-    """Цвета разрешены: TTY + нет --no-color/NO_COLOR/TERM=dumb."""
-    if _NO_COLOR:
+    """Цвета разрешены. Приоритет: флаг --color > NO_COLOR > TTY."""
+    if _COLOR_MODE == "always":
+        return True
+    if _COLOR_MODE == "never":
         return False
     if os.environ.get("NO_COLOR"):
         return False
@@ -118,6 +155,7 @@ class _ColorHelpFormatter(argparse.RawDescriptionHelpFormatter):
     def _format_action_invocation(self, action):
         return _c(super()._format_action_invocation(action), _GREEN)
 
+
 EXAMPLES = """Примеры:
    kw-yt dQw4w9WgXcQ
        Одно видео по id.
@@ -154,6 +192,9 @@ EXAMPLES = """Примеры:
 
    kw-yt clean dQw4w9WgXcQ --cache
        Удалить видео из библиотеки + вычистить кэш метаданных.
+
+   kw-yt completion bash
+       Bash-completion в stdout: eval "$(kw-yt completion bash)".
 """
 
 
@@ -187,8 +228,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--langs",
         metavar="ЯЗЫКИ",
         default=None,
-        help="Языки субтитров через запятую, по приоритету "
-        "(по умолчанию ru,en или из конфига).",
+        help="Языки субтитров через запятую, по приоритету (по умолчанию ru,en или из конфига).",
     )
     p.add_argument(
         "--format",
@@ -239,11 +279,7 @@ def build_parser() -> argparse.ArgumentParser:
         version=f"%(prog)s {__version__}",
         help="Показать версию и выйти.",
     )
-    p.add_argument(
-        "--no-color",
-        action="store_true",
-        help="Отключить цвета в выводе (то же, что NO_COLOR=1).",
-    )
+    _add_color_args(p)
     return p
 
 
@@ -277,11 +313,7 @@ def build_search_parser() -> argparse.ArgumentParser:
         default=None,
         help="Максимум видео в выдаче (по умолчанию 20).",
     )
-    p.add_argument(
-        "--no-color",
-        action="store_true",
-        help="Отключить цвета в выводе (то же, что NO_COLOR=1).",
-    )
+    _add_color_args(p)
     return p
 
 
@@ -303,11 +335,7 @@ def build_serve_parser() -> argparse.ArgumentParser:
         default=None,
         help="Порт (по умолчанию 8000, 0 — выбрать автоматически).",
     )
-    p.add_argument(
-        "--no-color",
-        action="store_true",
-        help="Отключить цвета в выводе (то же, что NO_COLOR=1).",
-    )
+    _add_color_args(p)
     return p
 
 
@@ -347,11 +375,7 @@ def build_export_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Не писать summary.json.",
     )
-    p.add_argument(
-        "--no-color",
-        action="store_true",
-        help="Отключить цвета в выводе (то же, что NO_COLOR=1).",
-    )
+    _add_color_args(p)
     return p
 
 
@@ -373,11 +397,7 @@ def build_stats_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Вывести сводку JSON вместо таблицы.",
     )
-    p.add_argument(
-        "--no-color",
-        action="store_true",
-        help="Отключить цвета в выводе (то же, что NO_COLOR=1).",
-    )
+    _add_color_args(p)
     return p
 
 
@@ -392,11 +412,7 @@ def build_library_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Вывести список JSON вместо таблицы.",
     )
-    p.add_argument(
-        "--no-color",
-        action="store_true",
-        help="Отключить цвета в выводе (то же, что NO_COLOR=1).",
-    )
+    _add_color_args(p)
     return p
 
 
@@ -432,12 +448,133 @@ def build_clean_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Вычистить также XDG-кэш метаданных.",
     )
-    p.add_argument(
-        "--no-color",
-        action="store_true",
-        help="Отключить цвета в выводе (то же, что NO_COLOR=1).",
-    )
+    _add_color_args(p)
     return p
+
+
+def build_completion_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(
+        prog="kw-yt completion",
+        description="Сгенерировать bash-completion для kw-yt (в stdout).",
+        formatter_class=_ColorHelpFormatter,
+    )
+    p.add_argument(
+        "shell",
+        nargs="?",
+        default="bash",
+        choices=["bash"],
+        help="Оболочка (пока только bash).",
+    )
+    _add_color_args(p)
+    return p
+
+
+def _completion_parsers() -> dict[str, argparse.ArgumentParser]:
+    """Субкоманда -> парсер. Единственный источник флагов для completion."""
+    return {
+        "": build_parser(),
+        "search": build_search_parser(),
+        "serve": build_serve_parser(),
+        "export": build_export_parser(),
+        "stats": build_stats_parser(),
+        "library": build_library_parser(),
+        "clean": build_clean_parser(),
+        "completion": build_completion_parser(),
+    }
+
+
+def _flags_of(parser: argparse.ArgumentParser) -> list[str]:
+    """Все опции парсера (источник истины — argparse, не руками)."""
+    return sorted({opt for a in parser._actions for opt in a.option_strings})
+
+
+def _value_flags(parsers: list[argparse.ArgumentParser]) -> list[str]:
+    """Опции, принимающие значение (nargs != 0 без choices): кандидатов нет."""
+    out: set[str] = set()
+    for p in parsers:
+        for a in p._actions:
+            if a.option_strings and a.nargs != 0 and not getattr(a, "choices", None):
+                out.update(a.option_strings)
+    return sorted(out)
+
+
+def _choices_of(parser: argparse.ArgumentParser, flag: str) -> list[str]:
+    """Значения choices для флага (например --format/--color)."""
+    for a in parser._actions:
+        if flag in a.option_strings:
+            choices = getattr(a, "choices", None)
+            if choices:
+                return sorted(str(c) for c in choices)
+    return []
+
+
+def render_bash_completion() -> str:
+    """Сгенерировать bash-completion из argparse-парсеров.
+
+    Подход (зафиксирован в ARCHITECTURE.md): скрипт не правится руками —
+    единственный источник истины — парсеры выше; файл
+    ``contrib/kw-yt-completion.bash`` — зафиксированный вывод этой функции.
+    """
+    parsers = _completion_parsers()
+    flags = {name: _flags_of(p) for name, p in parsers.items()}
+    fetch_fmt = _choices_of(parsers[""], "--format")
+    export_fmt = _choices_of(parsers["export"], "--format")
+    color_modes = _choices_of(parsers[""], "--color")
+    value_flags = _value_flags(list(parsers.values()))
+    subs = sorted(k for k in parsers if k)
+    top = sorted(set(subs) | set(flags[""]))
+    lines = [
+        "# Bash-completion для kw-yt. Сгенерировано `kw-yt completion bash` — не править вручную.",
+        '# Установка: eval "$(kw-yt completion bash)"',
+        "# или: kw-yt completion bash > ~/.local/share/bash-completion/completions/kw-yt",
+        "_kw_yt() {",
+        "    local cur prev sub",
+        "    COMPREPLY=()",
+        '    cur="${COMP_WORDS[COMP_CWORD]}"',
+        '    prev="${COMP_WORDS[COMP_CWORD-1]}"',
+        '    sub="${COMP_WORDS[1]}"',
+        "",
+        '    case "$prev" in',
+        "        --format)",
+        '            case "$sub" in',
+        f'                export) COMPREPLY=( $(compgen -W "{" ".join(export_fmt)}"'
+        ' -- "$cur") ); return 0 ;;',
+        f'                *) COMPREPLY=( $(compgen -W "{" ".join(fetch_fmt)}"'
+        ' -- "$cur") ); return 0 ;;',
+        "            esac",
+        "            ;;",
+        "        --color)",
+        f'            COMPREPLY=( $(compgen -W "{" ".join(color_modes)}" -- "$cur") )',
+        "            return 0",
+        "            ;;",
+        f"        {'|'.join(value_flags)})",
+        "            return 0",
+        "            ;;",
+        "    esac",
+        "",
+        '    case "$sub" in',
+    ]
+    for name in subs:
+        words = "bash" if name == "completion" else " ".join(flags[name])
+        lines += [
+            f"        {name})",
+            f'            COMPREPLY=( $(compgen -W "{words}" -- "$cur") )',
+            "            return 0",
+            "            ;;",
+        ]
+    lines += [
+        '        "")',
+        f'            COMPREPLY=( $(compgen -W "{" ".join(top)}" -- "$cur") )',
+        "            return 0",
+        "            ;;",
+        "    esac",
+        "",
+        f'    COMPREPLY=( $(compgen -W "{" ".join(flags[""])}" -- "$cur") )',
+        "    return 0",
+        "}",
+        "complete -F _kw_yt kw-yt",
+    ]
+    return "\n".join(lines) + "\n"
 
 
 def expand_playlist(url: str, ydl_factory=None) -> list[dict[str, Any]]:
@@ -567,8 +704,8 @@ def _load_ready_record(video_dir: Path) -> dict[str, Any]:
 def main(argv: list[str] | None = None) -> int:
     """Точка входа. Коды: 0 — всё ок, 1 — частичные ошибки/не найдено, 2 — usage.
 
-    Субкоманды `search`/`serve`/`export`/`stats`/`library`/`clean` — по argv[1],
-    иначе fetch-поведение (скачивание в библиотеку по умолчанию).
+    Субкоманды `search`/`serve`/`export`/`stats`/`library`/`clean`/`completion`
+    — по argv[1], иначе fetch-поведение (скачивание в библиотеку по умолчанию).
     Fetch пишет в stderr, stdout пуст; search печатает результаты в stdout;
     serve печатает URL в stdout; export печатает сводку в stdout; stats — таблицу/JSON.
     """
@@ -585,6 +722,8 @@ def main(argv: list[str] | None = None) -> int:
         return _main_library(argv)
     if argv and argv[0] == "clean":
         return _main_clean(argv)
+    if argv and argv[0] == "completion":
+        return _main_completion(argv)
     return _main_fetch(argv)
 
 
@@ -621,9 +760,7 @@ def _main_fetch(argv: list[str]) -> int:
         )
         return 2
     whisper_model = str(
-        args.whisper_model
-        if args.whisper_model is not None
-        else cfg.get("whisper_model", "small")
+        args.whisper_model if args.whisper_model is not None else cfg.get("whisper_model", "small")
     ).strip()
     if not whisper_model:
         _error("--whisper-model не должен быть пустым.")
@@ -635,8 +772,7 @@ def _main_fetch(argv: list[str]) -> int:
         jobs_n = 0
     if not (_JOBS_MIN <= jobs_n <= _JOBS_MAX):
         _error(
-            f"--jobs должен быть целым числом от {_JOBS_MIN} до {_JOBS_MAX}, "
-            f"получено {jobs_raw!r}."
+            f"--jobs должен быть целым числом от {_JOBS_MIN} до {_JOBS_MAX}, получено {jobs_raw!r}."
         )
         return 2
     use_whisper = not args.no_fallback_whisper
@@ -742,9 +878,7 @@ def _main_fetch(argv: list[str]) -> int:
                             },
                         )
                     )
-                    print(
-                        f"плейлист {url}: SKIP: {plan[-1][1]['error']}", file=sys.stderr
-                    )
+                    print(f"плейлист {url}: SKIP: {plan[-1][1]['error']}", file=sys.stderr)
                 else:
                     plan.append(("video", (item["url"], None)))
         else:
@@ -774,10 +908,10 @@ def _main_fetch(argv: list[str]) -> int:
 
     # --resume: готовые папки (meta+transcript+report) — в слоты без сети.
     slots: dict[int, dict[str, Any]] = {}
-    for p, item in enumerate(plan):
-        if item[0] == "done":
-            slots[p] = item[1]
-    video_order = [p for p, item in enumerate(plan) if item[0] == "video"]
+    for p, entry in enumerate(plan):
+        if entry[0] == "done":
+            slots[p] = entry[1]
+    video_order = [p for p, entry in enumerate(plan) if entry[0] == "video"]
     vnums = {p: k + 1 for k, p in enumerate(video_order)}
     n_videos = len(video_order)
     if args.resume:
@@ -815,7 +949,13 @@ def _main_fetch(argv: list[str]) -> int:
     def _run(task: tuple[int, str, str | None]) -> dict[str, Any]:
         _, source, hint_id = task
         return _process_video(
-            source, hint_id, langs, use_whisper, whisper_model, out_dir, args.format,
+            source,
+            hint_id,
+            langs,
+            use_whisper,
+            whisper_model,
+            out_dir,
+            args.format,
             section,
         )
 
@@ -985,8 +1125,10 @@ def _main_stats(argv: list[str]) -> int:
     if args.json:
         print(json.dumps(summary, ensure_ascii=False, indent=2))
         return 0
-    print(f"Корпус: {root} — видео {summary['n_videos']}, реплик {summary['n_segments']}, "
-          f"слов {summary['total_words']}, минут {summary['total_minutes']}.")
+    print(
+        f"Корпус: {root} — видео {summary['n_videos']}, реплик {summary['n_segments']}, "
+        f"слов {summary['total_words']}, минут {summary['total_minutes']}."
+    )
     origins = ", ".join(f"{k}: {v}" for k, v in sorted(summary["by_origin"].items()))
     langs = ", ".join(f"{k}: {v}" for k, v in sorted(summary["by_lang"].items()))
     print(f"Источники: {origins or '—'}. Языки: {langs or '—'}.")
@@ -994,8 +1136,10 @@ def _main_stats(argv: list[str]) -> int:
         print(f"Пропущено папок без транскрипта: {summary['skipped']}.")
     for v in summary["videos"]:
         title = v.get("title") or v.get("video_id") or "—"
-        print(f"- {title} [{v.get('video_id') or '—'}]: "
-              f"{v['segments']} реплик, {v['words']} слов, {v['seconds']} с.")
+        print(
+            f"- {title} [{v.get('video_id') or '—'}]: "
+            f"{v['segments']} реплик, {v['words']} слов, {v['seconds']} с."
+        )
     return 0
 
 
@@ -1044,10 +1188,7 @@ def _main_clean(argv: list[str]) -> int:
     root = storage_mod.resolve_root(None, cfg)
 
     if args.all and not args.yes:
-        _error(
-            "--all удаляет ВСЮ библиотеку. "
-            "Подтвердите: kw-yt clean --all --yes."
-        )
+        _error("--all удаляет ВСЮ библиотеку. Подтвердите: kw-yt clean --all --yes.")
         return 2
 
     days = None
@@ -1058,8 +1199,7 @@ def _main_clean(argv: list[str]) -> int:
             days = -1
         if days < 0:
             _error(
-                f"--older-than должен быть целым числом дней >= 0, "
-                f"получено {args.older_than!r}."
+                f"--older-than должен быть целым числом дней >= 0, получено {args.older_than!r}."
             )
             return 2
 
@@ -1081,10 +1221,7 @@ def _main_clean(argv: list[str]) -> int:
             except OSError:
                 continue
     elif not args.cache:
-        _error(
-            "укажите ID, --all --yes или --older-than DAYS "
-            "(см. kw-yt clean --help)."
-        )
+        _error("укажите ID, --all --yes или --older-than DAYS (см. kw-yt clean --help).")
         return 2
 
     removed, freed = storage_mod.remove_dirs(targets)
@@ -1103,6 +1240,17 @@ def _main_clean(argv: list[str]) -> int:
     if args.cache and not missing and not targets:
         return 0
     return 1
+
+
+def _main_completion(argv: list[str]) -> int:
+    """Печать bash-completion в stdout (только локально, без сети)."""
+    _init_color(argv)
+    args = build_completion_parser().parse_args(argv[1:])
+    if args.shell != "bash":
+        _error(f"оболочка {args.shell!r} не поддерживается (пока только bash).")
+        return 2
+    print(render_bash_completion(), end="")
+    return 0
 
 
 if __name__ == "__main__":

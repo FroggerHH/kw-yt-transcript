@@ -101,7 +101,7 @@ def test_jsonl_round_trip_with_meta():
         {"text": 'сказал "пока"', "start": 6.0, "duration": 1.0},
     ]
     meta = {"video_id": "dQw4w9WgXcQ", "title": "Тест"}
-    rows = [ _json.loads(line) for line in formats.to_jsonl(segs, meta).splitlines()]
+    rows = [_json.loads(line) for line in formats.to_jsonl(segs, meta).splitlines()]
     assert [r["text"] for r in rows] == ["привет, мир", 'сказал "пока"']
     assert all(r["video_id"] == "dQw4w9WgXcQ" and r["title"] == "Тест" for r in rows)
     assert [r["start"] for r in rows] == [1.5, 6.0]

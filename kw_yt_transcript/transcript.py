@@ -97,9 +97,7 @@ def get_transcript(
     try:
         segments = _normalize(transcript_obj.fetch().to_raw_data())
     except Exception as e:
-        raise NoTranscriptError(
-            f"Не удалось загрузить субтитры видео {video_id!r}: {e}"
-        ) from e
+        raise NoTranscriptError(f"Не удалось загрузить субтитры видео {video_id!r}: {e}") from e
     if not segments:
         raise NoTranscriptError(f"Для видео {video_id!r} получены пустые субтитры.")
     return segments, _origin_of(transcript_obj), getattr(transcript_obj, "language_code", None)

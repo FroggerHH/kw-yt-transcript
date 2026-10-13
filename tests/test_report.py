@@ -28,7 +28,7 @@ def _segs():
 
 def test_report_timestamp_links():
     html = render_report(_meta(), _segs(), compute_stats(_segs(), 372), "manual")
-    assert '<meta charset' in html
+    assert "<meta charset" in html
     assert "https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=0s" in html
     assert "https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=65s" in html
 
@@ -79,7 +79,7 @@ def test_index_table_and_links():
         }
     ]
     html = render_index(entries, {"n_videos": 1, "total_words": 50, "total_min": 1.7})
-    assert '<meta charset' in html
+    assert "<meta charset" in html
     assert "video-odin_id1/report.html" in html
     assert "<table>" in html and "Видео один" in html
     assert "Всего видео: 1" in html
@@ -150,9 +150,16 @@ def test_report_prose_before_timed():
 
 def test_report_files_hub_links():
     files = [
-        "meta.json", "report.html", "thumbnail.jpg", "transcript.srt",
-        "transcript.vtt", "transcript.json", "transcript.jsonl",
-        "transcript.csv", "transcript.txt", "transcript.md",
+        "meta.json",
+        "report.html",
+        "thumbnail.jpg",
+        "transcript.srt",
+        "transcript.vtt",
+        "transcript.json",
+        "transcript.jsonl",
+        "transcript.csv",
+        "transcript.txt",
+        "transcript.md",
     ]
     html = render_report(_meta(), _segs(), compute_stats(_segs(), 372), "manual", files=files)
     assert "<h2>Файлы</h2>" in html or "Файлы (" in html
@@ -168,9 +175,9 @@ def test_report_file_url_fitness():
     import re
 
     for url in re.findall(r'https?://[^"\s<>]+', html):
-        assert url.startswith("https://www.youtube.com/") or url.startswith(
-            "https://youtu.be/"
-        ), url
+        assert url.startswith("https://www.youtube.com/") or url.startswith("https://youtu.be/"), (
+            url
+        )
 
 
 def test_report_search_covers_prose():

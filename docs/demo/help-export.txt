@@ -1,0 +1,21 @@
+usage: kw-yt export [-h] [--in ПАПКА] [--format {jsonl,csv}] [--out ФАЙЛ]
+                    [--summary ФАЙЛ] [--no-summary]
+                    [--color {auto,always,never}] [--no-color]
+
+Сводный экспорт корпуса в один файл (для RAG и анализа).
+
+options:
+  -h, --help            show this help message and exit
+  --in ПАПКА            Корень корпуса (по умолчанию библиотека или из
+                        конфига).
+  --format {jsonl,csv}  Формат сводного файла (по умолчанию jsonl).
+  --out ФАЙЛ            Куда писать корпус (по умолчанию
+                        <корень>/corpus.{jsonl|csv}).
+  --summary ФАЙЛ        Куда писать summary.json (по умолчанию
+                        <корень>/summary.json).
+  --no-summary          Не писать summary.json.
+  --color {auto,always,never}
+                        Цвета в выводе: auto (по TTY), always, never (по
+                        умолчанию auto).
+  --no-color            Отключить цвета в выводе (то же, что --color never /
+                        NO_COLOR=1).

@@ -1,0 +1,81 @@
+usage: kw-yt [-h] [--from-file ФАЙЛ] [--out ПАПКА] [--langs ЯЗЫКИ]
+             [--format {srt,vtt,json,txt,md,jsonl,csv,all}] [--from SEC]
+             [--to SEC] [--no-fallback-whisper] [--whisper-model МОДЕЛЬ]
+             [--jobs N] [--resume] [--version] [--color {auto,always,never}]
+             [--no-color]
+             [inputs ...]
+
+Скачивание метаданных и транскриптов видео YouTube.
+
+positional arguments:
+  inputs                Video id, URL видео или URL плейлиста. Несколько —
+                        через запятую, пробел или перенос строки.
+
+options:
+  -h, --help            show this help message and exit
+  --from-file ФАЙЛ      Файл со списком входов: по одному на строку, пустые
+                        строки и # — пропускаются.
+  --out, -o ПАПКА       Папка для результатов (по умолчанию библиотека или из
+                        конфига).
+  --langs ЯЗЫКИ         Языки субтитров через запятую, по приоритету (по
+                        умолчанию ru,en или из конфига).
+  --format {srt,vtt,json,txt,md,jsonl,csv,all}
+                        Формат вывода (по умолчанию all — все форматы).
+  --from SEC            Начало фрагмента (mm:ss или секунды; нужен и --to).
+  --to SEC              Конец фрагмента (mm:ss или секунды; нужен и --from).
+  --no-fallback-whisper
+                        Не использовать Whisper, если субтитров нет (по
+                        умолчанию fallback включён).
+  --whisper-model МОДЕЛЬ
+                        Модель Whisper для fallback (по умолчанию small или из
+                        конфига).
+  --jobs, -j N          Параллельных загрузок (1–16, по умолчанию 4 или из
+                        конфига).
+  --resume              Пропускать видео, чья папка уже готова (сеть не
+                        вызывается).
+  --version             Показать версию и выйти.
+  --color {auto,always,never}
+                        Цвета в выводе: auto (по TTY), always, never (по
+                        умолчанию auto).
+  --no-color            Отключить цвета в выводе (то же, что --color never /
+                        NO_COLOR=1).
+
+Примеры:
+   kw-yt dQw4w9WgXcQ
+       Одно видео по id.
+
+   kw-yt https://www.youtube.com/watch?v=dQw4w9WgXcQ
+       Одно видео по URL.
+
+   kw-yt dQw4w9WgXcQ,9bZkp7q19f0 "https://youtu.be/9bZkp7q19f0"
+       Несколько видео через запятую/пробел.
+
+   kw-yt --from-file links.txt --out ./out
+       Список входов из файла (по одному на строку, # — комментарий).
+
+   kw-yt "https://www.youtube.com/playlist?list=PLxxxxxxxx" --format txt
+       Плейлист целиком, только читаемый текст.
+
+   kw-yt --jobs 8 --resume dQw4w9WgXcQ 9bZkp7q19f0
+       Параллельно, готовые папки пропускаются.
+
+   kw-yt search "ключевое слово" --in ./out
+       Поиск по сохранённым транскриптам.
+
+   kw-yt serve ./out --port 8000
+       Просмотр корпуса в браузере.
+
+   kw-yt export --in ./out
+       Сводный корпус (corpus.jsonl + summary.json) для RAG и анализа.
+
+   kw-yt stats --in ./out
+       Сводная статистика корпуса (таблица или --json).
+
+   kw-yt library
+       Список библиотеки (собственное хранилище, размеры, источники).
+
+   kw-yt clean dQw4w9WgXcQ --cache
+       Удалить видео из библиотеки + вычистить кэш метаданных.
+
+   kw-yt completion bash
+       Bash-completion в stdout: eval "$(kw-yt completion bash)".

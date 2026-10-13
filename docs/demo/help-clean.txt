@@ -1,0 +1,21 @@
+usage: kw-yt clean [-h] [--all] [--yes] [--older-than DAYS] [--cache]
+                   [--color {auto,always,never}] [--no-color]
+                   [ids ...]
+
+Удалить видео из библиотеки и/или кэш метаданных.
+
+positional arguments:
+  ids                   Video id для удаления (точное совпадение папки
+                        *_<id>).
+
+options:
+  -h, --help            show this help message and exit
+  --all                 Удалить все видео библиотеки (требует также --yes).
+  --yes                 Подтвердить удаление всех (--all без --yes — отказ).
+  --older-than DAYS     Удалить видео старше N дней (по времени папки).
+  --cache               Вычистить также XDG-кэш метаданных.
+  --color {auto,always,never}
+                        Цвета в выводе: auto (по TTY), always, never (по
+                        умолчанию auto).
+  --no-color            Отключить цвета в выводе (то же, что --color never /
+                        NO_COLOR=1).

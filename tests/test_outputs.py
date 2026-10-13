@@ -51,7 +51,16 @@ def test_write_video_all_files(tmp_path):
     video_dir = Path(paths["dir"])
     assert video_dir.name == "testovoe-video-pro-transkripty_dQw4w9WgXcQ"
     assert set(paths) == {
-        "dir", "meta", "srt", "vtt", "json", "txt", "md", "jsonl", "csv", "report",
+        "dir",
+        "meta",
+        "srt",
+        "vtt",
+        "json",
+        "txt",
+        "md",
+        "jsonl",
+        "csv",
+        "report",
     }
     for key in ("meta", "srt", "vtt", "json", "txt", "md", "jsonl", "csv", "report"):
         assert Path(paths[key]).is_file(), key
@@ -289,7 +298,7 @@ def test_write_index_entries_carry_thumbnail_file(tmp_path):
     assert index["entries"][0]["thumbnail_file"] == "thumbnail.jpg"
     assert index["entries"][1]["thumbnail_file"] is None
     body = (tmp_path / "index.html").read_text(encoding="utf-8")
-    assert f'{dirname}/thumbnail.jpg' in body
+    assert f"{dirname}/thumbnail.jpg" in body
     assert 'loading="lazy"' in body
 
 

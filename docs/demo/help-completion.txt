@@ -1,0 +1,15 @@
+usage: kw-yt completion [-h] [--color {auto,always,never}] [--no-color]
+                        [{bash}]
+
+Сгенерировать bash-completion для kw-yt (в stdout).
+
+positional arguments:
+  {bash}                Оболочка (пока только bash).
+
+options:
+  -h, --help            show this help message and exit
+  --color {auto,always,never}
+                        Цвета в выводе: auto (по TTY), always, never (по
+                        умолчанию auto).
+  --no-color            Отключить цвета в выводе (то же, что --color never /
+                        NO_COLOR=1).

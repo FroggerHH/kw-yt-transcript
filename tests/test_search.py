@@ -22,7 +22,10 @@ def make_video(root, dirname, video_id, title, segments):
 def corpus(tmp_path):
     out = tmp_path / "out"
     make_video(
-        out, "aaa_vid00000001", "vid00000001", "Первое видео",
+        out,
+        "aaa_vid00000001",
+        "vid00000001",
+        "Первое видео",
         [
             {"text": "Привет, это тестовый сегмент.", "start": 0.0, "duration": 2.0},
             {"text": "Продолжение без совпадений.", "start": 5.0, "duration": 2.0},
@@ -30,7 +33,10 @@ def corpus(tmp_path):
         ],
     )
     make_video(
-        out, "bbb_vid00000002", "vid00000002", "Второе видео",
+        out,
+        "bbb_vid00000002",
+        "vid00000002",
+        "Второе видео",
         [
             {"text": "Один тестовый сегмент.", "start": 10.0, "duration": 2.0},
             {"text": "Что-то совсем другое.", "start": 50.0, "duration": 2.0},
@@ -84,9 +90,7 @@ def test_search_hit_shape(corpus):
     assert set(res) == {"video_id", "title", "dir", "direct_count", "hits"}
     assert res["title"] == "Первое видео"
     assert res["direct_count"] == 1
-    assert res["hits"] == [
-        {"start": 5.0, "text": "Продолжение без совпадений.", "direct": True}
-    ]
+    assert res["hits"] == [{"start": 5.0, "text": "Продолжение без совпадений.", "direct": True}]
 
 
 def test_search_marks_direct_and_context(corpus):

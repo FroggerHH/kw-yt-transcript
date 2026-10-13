@@ -92,11 +92,14 @@ def render_report(
     except Exception:
         wpm_s = "—"
     top = stats.get("top_keywords") or []
-    top_s = ", ".join(
-        f"{html.escape(str(k.get('word', '')), quote=True)} ({int(k.get('count', 0))})"
-        for k in top
-        if isinstance(k, dict) and k.get("word")
-    ) or "—"
+    top_s = (
+        ", ".join(
+            f"{html.escape(str(k.get('word', '')), quote=True)} ({int(k.get('count', 0))})"
+            for k in top
+            if isinstance(k, dict) and k.get("word")
+        )
+        or "—"
+    )
 
     chapters = meta.get("chapters") or []
     ch_rows: list[str] = []
@@ -111,7 +114,7 @@ def render_report(
         if video_id:
             ch_rows.append(
                 f'<li><a href="https://youtu.be/{html.escape(video_id, quote=True)}'
-                f"?t={sec}\">{_mmss(sec)}</a> {ctitle}</li>"
+                f'?t={sec}">{_mmss(sec)}</a> {ctitle}</li>'
             )
         else:
             ch_rows.append(f"<li>{_mmss(sec)} {ctitle}</li>")
@@ -127,10 +130,7 @@ def render_report(
         ts = _mmss(start)
         t_esc = html.escape(str(text), quote=False)
         if video_id:
-            link = (
-                f"https://www.youtube.com/watch?v={html.escape(video_id, quote=True)}"
-                f"&t={s}s"
-            )
+            link = f"https://www.youtube.com/watch?v={html.escape(video_id, quote=True)}&t={s}s"
             seg_rows.append(
                 f'<p class="seg"><a class="ts" href="{link}">{ts}</a> '
                 f'<span class="seg-text">{t_esc}</span></p>'
@@ -142,14 +142,13 @@ def render_report(
             )
 
     chapters_html = (
-        "<section><h2>Главы</h2><ul>" + "".join(ch_rows) + "</ul></section>"
-        if ch_rows
-        else ""
+        "<section><h2>Главы</h2><ul>" + "".join(ch_rows) + "</ul></section>" if ch_rows else ""
     )
     try:
         prose_paras = _paragraphs(
             [
-                s for s in (segments or [])
+                s
+                for s in (segments or [])
                 if isinstance(s, dict)
                 and isinstance(s.get("text"), str)
                 and isinstance(s.get("start"), (int, float))
@@ -159,8 +158,7 @@ def render_report(
     except Exception:
         prose_paras = []
     prose_rows = "".join(
-        f'<p class="prose"><span class="prose-text">'
-        f"{html.escape(p, quote=False)}</span></p>"
+        f'<p class="prose"><span class="prose-text">{html.escape(p, quote=False)}</span></p>'
         for p in prose_paras
     )
     prose_html = (
@@ -203,16 +201,16 @@ def render_report(
         )
 
     section_html = ""
-    section = meta.get("section") if isinstance(meta.get("section"), dict) else {}
+    section: Any = meta.get("section") if isinstance(meta.get("section"), dict) else {}
+    sec_from: float | None
+    sec_to: float | None
     try:
         sec_from = float(section.get("from"))
         sec_to = float(section.get("to"))
     except (TypeError, ValueError):
         sec_from = sec_to = None
     if sec_from is not None and sec_to is not None:
-        section_html = (
-            f"<p class=\"meta\">Фрагмент {_mmss(sec_from)}–{_mmss(sec_to)}</p>\n"
-        )
+        section_html = f'<p class="meta">Фрагмент {_mmss(sec_from)}–{_mmss(sec_to)}</p>\n'
 
     ai_banner = ""
     if origin in ("auto", "whisper"):
@@ -224,17 +222,17 @@ def render_report(
         )
 
     return (
-        "<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<meta charset=\"utf-8\">\n"
+        '<!DOCTYPE html>\n<html lang="ru">\n<head>\n<meta charset="utf-8">\n'
         f"<title>{html.escape(title, quote=True)}</title>\n"
         f"<style>{_CSS}</style>\n</head>\n<body>\n"
         f"<header><h1>{html.escape(title, quote=False)}</h1>\n{thumb}"
-        f"<p class=\"meta\">Автор: {html.escape(author, quote=False)} | "
+        f'<p class="meta">Автор: {html.escape(author, quote=False)} | '
         f"Дата: {html.escape(date, quote=False)} | "
         f"Длительность: {_mmss(duration)} | "
         f"Источник: {html.escape(_origin_label(origin), quote=False)} | "
         f"Язык: {html.escape(str(lang), quote=False)}</p>\n{section_html}{watch}</header>\n"
         f"{ai_banner}"
-        f"<section class=\"stats\"><h2>Статистика</h2>\n"
+        f'<section class="stats"><h2>Статистика</h2>\n'
         f"<p>Слов: {words} | Символов: {chars} | "
         f"Время чтения: {reading_s} мин | Темп речи: {wpm_s} слов/мин</p>\n"
         f"<p>Ключевые слова: {top_s}</p></section>\n"
@@ -283,7 +281,7 @@ def render_index(
                 f'style="width:120px;margin-right:8px;vertical-align:middle">'
             )
         rows.append(
-            f"<tr><td>{thumb}<a href=\"{href}\">{html.escape(title, quote=False)}</a></td>"
+            f'<tr><td>{thumb}<a href="{href}">{html.escape(title, quote=False)}</a></td>'
             f"<td>{html.escape(author, quote=False)}</td>"
             f"<td>{_mmss(dur)}</td>"
             f"<td>{html.escape(str(words), quote=False)}</td>"
@@ -297,11 +295,11 @@ def render_index(
         else "<p>Видео нет.</p>"
     )
     return (
-        "<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<meta charset=\"utf-8\">\n"
+        '<!DOCTYPE html>\n<html lang="ru">\n<head>\n<meta charset="utf-8">\n'
         "<title>Каталог транскриптов</title>\n"
         f"<style>{_CSS}</style>\n</head>\n<body>\n"
         "<header><h1>Каталог транскриптов</h1>\n"
-        f"<p class=\"meta\">Всего видео: {n} | Всего слов: {tw} | "
+        f'<p class="meta">Всего видео: {n} | Всего слов: {tw} | '
         f"Общая длительность: {tm_s} мин</p></header>\n"
         f"{body}\n</body>\n</html>\n"
     )

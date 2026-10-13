@@ -35,11 +35,39 @@ TRANSCRIPT_FILENAMES = {
 
 #: Транслитерация кириллицы для slug (строчные; остальное вычищается regex).
 _RU_MAP = {
-    "а": "a", "б": "b", "в": "v", "г": "g", "д": "d", "е": "e", "ё": "yo",
-    "ж": "zh", "з": "z", "и": "i", "й": "y", "к": "k", "л": "l", "м": "m",
-    "н": "n", "о": "o", "п": "p", "р": "r", "с": "s", "т": "t", "у": "u",
-    "ф": "f", "х": "h", "ц": "ts", "ч": "ch", "ш": "sh", "щ": "sch",
-    "ъ": "", "ы": "y", "ь": "", "э": "e", "ю": "yu", "я": "ya",
+    "а": "a",
+    "б": "b",
+    "в": "v",
+    "г": "g",
+    "д": "d",
+    "е": "e",
+    "ё": "yo",
+    "ж": "zh",
+    "з": "z",
+    "и": "i",
+    "й": "y",
+    "к": "k",
+    "л": "l",
+    "м": "m",
+    "н": "n",
+    "о": "o",
+    "п": "p",
+    "р": "r",
+    "с": "s",
+    "т": "t",
+    "у": "u",
+    "ф": "f",
+    "х": "h",
+    "ц": "ts",
+    "ч": "ch",
+    "ш": "sh",
+    "щ": "sch",
+    "ъ": "",
+    "ы": "y",
+    "ь": "",
+    "э": "e",
+    "ю": "yu",
+    "я": "ya",
 }
 
 #: Максимальная длина slug.
@@ -112,9 +140,7 @@ def _resolve_formats(formats_sel: str) -> list[str]:
         return list(FORMATS)
     if formats_sel in FORMATS:
         return [formats_sel]
-    raise ValueError(
-        f"Неизвестный формат: {formats_sel!r}. Доступны: all, {', '.join(FORMATS)}."
-    )
+    raise ValueError(f"Неизвестный формат: {formats_sel!r}. Доступны: all, {', '.join(FORMATS)}.")
 
 
 def _atomic_write_text(path: Path, content: str) -> None:
@@ -271,7 +297,7 @@ def write_video(
         report_html = render_report(report_meta, segments, record["stats"], origin, files=present)
     except Exception:
         report_html = (
-            "<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<meta charset=\"utf-8\">\n"
+            '<!DOCTYPE html>\n<html lang="ru">\n<head>\n<meta charset="utf-8">\n'
             "<title>Отчёт</title>\n</head>\n<body><p>Отчёт недоступен.</p>\n</body>\n</html>\n"
         )
     report_path = video_dir / "report.html"

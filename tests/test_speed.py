@@ -183,9 +183,7 @@ def test_find_ready_helper(tmp_path):
 def test_find_ready_needs_full_bundle(tmp_path):
     out = tmp_path / "out"
     out.mkdir()
-    paths = outputs_mod.write_video(
-        out, make_meta(VIDS[1]), SEGMENTS, "manual", formats_sel="txt"
-    )
+    paths = outputs_mod.write_video(out, make_meta(VIDS[1]), SEGMENTS, "manual", formats_sel="txt")
     assert outputs_mod.find_ready(out, VIDS[1]) is None, "нет transcript.json — не готово"
     weak = out / f"слабая-папка_{VIDS[2]}"
     weak.mkdir()

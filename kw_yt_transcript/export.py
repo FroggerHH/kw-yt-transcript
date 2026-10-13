@@ -36,12 +36,9 @@ def _is_segment(item: Any) -> bool:
     start, duration = item.get("start"), item.get("duration")
     if type(start) not in (int, float) or type(duration) not in (int, float):
         return False
-    return (
-        math.isfinite(start)
-        and math.isfinite(duration)
-        and start >= 0
-        and duration >= 0
-    )
+    # type() выше выкинул bool/None/строки; isinstance сужает тип для mypy.
+    assert isinstance(start, (int, float)) and isinstance(duration, (int, float))
+    return math.isfinite(start) and math.isfinite(duration) and start >= 0 and duration >= 0
 
 
 def collect_corpus(root: str | Path) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
@@ -70,9 +67,7 @@ def collect_corpus(root: str | Path) -> tuple[list[dict[str, Any]], list[dict[st
             continue
         bad = [i for i, s in enumerate(segments) if not _is_segment(s)]
         if bad:
-            skipped.append(
-                {"dir": child.name, "error": f"битые сегменты (индексы: {bad[:5]}...)"}
-            )
+            skipped.append({"dir": child.name, "error": f"битые сегменты (индексы: {bad[:5]}...)"})
             continue
         meta: dict[str, Any] = {}
         mpath = child / "meta.json"

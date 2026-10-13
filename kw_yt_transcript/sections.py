@@ -6,6 +6,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from kw_yt_transcript.timefmt import mmss as _mmss
 
 
@@ -20,9 +22,7 @@ def parse_ts(s: str) -> float:
     if ":" in raw:
         parts = raw.split(":")
         if len(parts) not in (2, 3) or not all(p.strip() for p in parts):
-            raise ValueError(
-                f"Непонятное время {raw!r}: ожидается mm:ss, hh:mm:ss или секунды."
-            )
+            raise ValueError(f"Непонятное время {raw!r}: ожидается mm:ss, hh:mm:ss или секунды.")
         try:
             nums = [float(p) for p in parts]
         except ValueError:
@@ -47,9 +47,7 @@ def parse_ts(s: str) -> float:
     return total
 
 
-def clip_segments(
-    segments: list[dict], frm: float, to: float
-) -> list[dict]:
+def clip_segments(segments: list[dict], frm: float, to: float) -> list[dict]:
     """Реплики, пересекающие интервал [frm, to): ``start < to`` и ``end > frm``.
 
     Реплики возвращаются как есть (duration исходные, без разрезания) —
@@ -62,8 +60,10 @@ def clip_segments(
         if not isinstance(s, dict):
             continue
         try:
-            start = float(s.get("start"))
-            end = start + float(s.get("duration"))
+            start_raw: Any = s.get("start")
+            dur_raw: Any = s.get("duration")
+            start = float(start_raw)
+            end = start + float(dur_raw)
         except (TypeError, ValueError):
             continue
         if start < to and end > frm:

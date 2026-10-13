@@ -1,0 +1,17 @@
+usage: kw-yt serve [-h] [--port N] [--color {auto,always,never}] [--no-color]
+                   [directory]
+
+Раздавать готовый корпус (index.html/report.html) по HTTP.
+
+positional arguments:
+  directory             Корень корпуса (по умолчанию библиотека или из
+                        конфига).
+
+options:
+  -h, --help            show this help message and exit
+  --port N              Порт (по умолчанию 8000, 0 — выбрать автоматически).
+  --color {auto,always,never}
+                        Цвета в выводе: auto (по TTY), always, never (по
+                        умолчанию auto).
+  --no-color            Отключить цвета в выводе (то же, что --color never /
+                        NO_COLOR=1).

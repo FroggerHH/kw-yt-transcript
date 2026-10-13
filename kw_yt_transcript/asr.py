@@ -65,14 +65,24 @@ def _decode_via_ffmpeg(audio_path: str, tmpdir: str) -> Any:
         import numpy as np
     except ImportError as e:
         raise ASRError(
-            "Нет модуля numpy. Установите ASR-зависимость: "
-            "pip install kw-yt-transcript[asr]"
+            "Нет модуля numpy. Установите ASR-зависимость: pip install kw-yt-transcript[asr]"
         ) from e
     out_wav = str(Path(tmpdir) / "decode-16k-mono.wav")
     try:
         subprocess.run(
-            ["ffmpeg", "-y", "-i", str(audio_path),
-             "-ar", "16000", "-ac", "1", "-f", "wav", out_wav],
+            [
+                "ffmpeg",
+                "-y",
+                "-i",
+                str(audio_path),
+                "-ar",
+                "16000",
+                "-ac",
+                "1",
+                "-f",
+                "wav",
+                out_wav,
+            ],
             check=True,
             capture_output=True,
             timeout=_DECODE_TIMEOUT_SEC,
@@ -186,9 +196,7 @@ def transcribe_whisper(
                 "pip install kw-yt-transcript[asr]"
             ) from e
         try:
-            segments = _transcribe_vad_chain(
-                lambda vad: model.transcribe(audio, vad_filter=vad)
-            )
+            segments = _transcribe_vad_chain(lambda vad: model.transcribe(audio, vad_filter=vad))
         except TypeError as e:
             if "metadata_errors" not in str(e):
                 raise ASRError(f"Whisper не смог распознать аудио: {e}") from e

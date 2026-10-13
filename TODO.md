@@ -79,9 +79,13 @@
 - [x] outputs: суффикс _part + meta.section + раздельный resume; report-пометка; тесты (9) + README(EN)/completion/ARCH
 - [x] Gates: pytest 224, ruff clean, --help exit 0; находка: completion не хватало library/clean/--no-color → волна 22
 
-## Волна 22: AI-agent skill [ ] (queued, ПОСЛЕ волн 20–21 — README правится многими)
-- [ ] SKILL.md (Agent Skills spec: name/description/frontmatter): когда использовать kw-yt (транскрипты для анализа, RAG-корпус, поиск), как (команды, exit-коды, форматы, без API-ключа, origin-маркировка), примеры
-- [ ] tests/test_skill.py (файл + frontmatter + ключевые команды); README-ссылка — отдельным коммитом оркестратора после всех волн; Gates: pytest зелёный
+## Волна 22: AI-agent skill [x] (done внутри волны 23, 246 passed, fix-4)
+- [x] SKILL.md (spec: name/description, 9 команд, exit-коды, форматы, библиотека, origin) + tests/test_skill.py
+
+## Волна 23: Skill-compliance [x] (done 18:07, 246 passed, fix-4)
+- [x] `completion bash` из парсеров (+contrib реген, тесты source/complete); `--color auto/always/never` ×8 парсеров + тесты
+- [x] docs/demo/ (захваты help побайтовы) + quick start + Contributing (RU+EN); ruff format (16 файлов) + mypy 14→0; CI format/mypy-шаги
+- [x] Gates: pytest 246, ruff check+format чисто, mypy чисто, completion verified
 - [x] v0.1 → v0.2.0: 18 волн, 191 passed + 2 skipped, ruff чисто, всё запушено (FroggerHH/kw-yt-transcript, PUBLIC)
 - [x] Live-доказательства: fetch/batch/resume/export/stats/search/serve/Whisper-tiny(75)/thumbnails/gallery
 - [ ] Wiki-remote: not found весь день → user-step (создать первую страницу в web-wiki, контент в docs/wiki/)

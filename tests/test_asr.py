@@ -110,6 +110,7 @@ def test_transcribe_failure_wrapped(tmp_path):
 
 def test_custom_downloader_failure_wrapped(monkeypatch):
     _have_ffmpeg(monkeypatch)
+
     def dead_downloader(url):
         raise RuntimeError("ERROR: Private video")
 
@@ -243,7 +244,7 @@ def test_decode_via_ffmpeg_fake_binary(monkeypatch, tmp_path):
     audio = tmp_path / "in.mp3"
     audio.write_bytes(b"fake")
     samples = asr._decode_via_ffmpeg(str(audio), str(tmp_path))
-    expected = (np.frombuffer(bytes(range(256)) * 64, dtype=np.int16).astype(np.float32) / 32768.0)
+    expected = np.frombuffer(bytes(range(256)) * 64, dtype=np.int16).astype(np.float32) / 32768.0
     assert samples.dtype == np.float32
     assert samples.shape == expected.shape
     assert np.allclose(samples, expected)

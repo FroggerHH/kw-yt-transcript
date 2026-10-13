@@ -1,0 +1,12 @@
+usage: kw-yt library [-h] [--json] [--color {auto,always,never}] [--no-color]
+
+Список библиотеки: видео с размерами и источниками.
+
+options:
+  -h, --help            show this help message and exit
+  --json                Вывести список JSON вместо таблицы.
+  --color {auto,always,never}
+                        Цвета в выводе: auto (по TTY), always, never (по
+                        умолчанию auto).
+  --no-color            Отключить цвета в выводе (то же, что --color never /
+                        NO_COLOR=1).
