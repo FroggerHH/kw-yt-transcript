@@ -76,7 +76,9 @@
 - [ ] README_EN.md — полный английский перевод 1:1; RU основной; языковые шапки-ссылки в обоих
 - [ ] test_readme: EN существует + ключевые секции + та же версия; Gates: pytest зелёный
 
-## Волна 16: Rich README [ ] (queued, ПОСЛЕ волн 14–15 — правит README)
+## Волна 16: Rich README [x] (done 17:04, 190 passed, fix-3)
+- [x] Бейджи (CI/0.2.0/Python/MIT) + Оглавление с якорями + Highlights с demo + FAQ (строго по коду)
+- [x] Тест якорей TOC + маркеры; только README + test_readme; Gates: pytest 190, ruff clean
 - [ ] Бейджи (CI, версия, Python, лицензия), оглавление, highlights, скриншот-описание report.html, демо-сессия, FAQ; без битых ссылок/флагов (тест флагов должен остаться зелёным)
 - [ ] Gates: pytest зелёный (маркеры), `grep` битых якорей
 

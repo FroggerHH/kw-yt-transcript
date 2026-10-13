@@ -34,6 +34,10 @@ def test_readme_required_sections():
         "Использование",
         "Выходная структура",
         "Ошибки и коды выхода",
+        "Оглавление",
+        "Highlights",
+        "FAQ",
+        "shields.io",
         "pipx install",
         "uv tool install",
         "uv sync",
@@ -108,6 +112,23 @@ def _all_option_strings():
         cli_mod.build_stats_parser(),
     )
     return {opt for p in parsers for action in p._actions for opt in action.option_strings}
+
+
+def test_readme_toc_anchors():
+    """Каждый якорь из Оглавления соответствует реальному ## заголовку."""
+    text = readme_text()
+    toc = text.split("## Оглавление", 1)[1].split("## ", 1)[0]
+    anchors = re.findall(r"\(#(.*?)\)", toc)
+    assert anchors, "в Оглавлении нет якорей"
+
+    def slug(header):
+        s = header.strip().lower().replace(" ", "-")
+        return re.sub(r"[(),.:;!?«»\"'—–]", "", s)
+
+    headers = [line[3:] for line in text.splitlines() if line.startswith("## ")]
+    slugs = {slug(h) for h in headers}
+    for anchor in anchors:
+        assert anchor in slugs, f"якорь #{anchor} без заголовка"
 
 
 def test_readme_flags_exist_in_parser():

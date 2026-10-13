@@ -23,7 +23,8 @@
 - [x] Волны 12 (CI: push/PR, matrix 3.11–3.13, pytest+ruff, бейдж) + 13 (AI-warning: README-плашка, баннер report, строки md/txt) (fix-3). Gates: 188 passed + 2 skipped, ruff clean, YAML валиден.
 - [x] Волна 14 (fix-3): uv-миграция (uv.lock 35 пакетов, .python-version 3.14, CI setup-uv, README uv-first). Gates: sync чисто, 188 passed, ruff clean.
 - [x] Волна 15 (fix-3, retry после rate limit): README_EN.md 1:1 + шапки-ссылки + тест EN. Gates: 189 passed, ruff clean.
-- [ ] Волна 16 (fixer): rich README (бейджи, TOC, FAQ). Затем wiki-пуш, done + отчёт.
+- [x] Волна 16 (fix-3): rich README (бейджи, TOC с якорями, highlights+demo, FAQ по коду). Gates: 190 passed, ruff clean.
+- [ ] Wiki-пуш + done: коммит ниже, повтор клона wiki, отчёт.
 - [ ] Live batch (2 видео, --jobs 2, --resume повтор) + Whisper-tiny на реальном аудио. Затем done + отчёт.
 - [x] Done v0.2 (16:34 MSK, до дедлайна 17:31): коммит ниже, дерево чистое. Live-доказательства: single→9 файлов exit 0, report.html 33 ссылки, search 38–57 хитов, serve 200, export 61/487, stats таблица+JSON, thumbnail.jpg.
 - [x] Волна 6 (оркестратор): `kw-yt stats` (summarize + таблица/JSON, exit 0/1/2). Gates: 173 passed, ruff clean, live таблица+JSON ok.
