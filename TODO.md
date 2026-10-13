@@ -73,10 +73,12 @@
 ## Волна 15: Multilanguage README [x] (done 17:03, 189 passed, fix-3)
 - [x] README_EN.md 1:1 (73% объёма RU, команды без перевода) + шапки-ссылки + тест EN
 - [x] Gates: pytest 189, ruff clean (первая попытка частично записала файлы до rate limit — учтено в retry)
-- [ ] README_EN.md — полный английский перевод 1:1; RU основной; языковые шапки-ссылки в обоих
-- [ ] test_readme: EN существует + ключевые секции + та же версия; Gates: pytest зелёный
+- [x] README_EN.md — полный английский перевод 1:1; RU основной; языковые шапки-ссылки в обоих (done, волна 15 — 189 passed)
+- [x] test_readme: EN существует + ключевые секции + та же версия; Gates: pytest зелёный (подтверждено волной 16: 190 passed)
 
-## Волна 16: Rich README [x] (done 17:04, 190 passed, fix-3)
+## Review-финал v0.2+ [x] (done 17:10, 191 passed, ora-3 → fix-3 + оркестратор)
+- [x] 8 пунктов без блокеров: CI locked+ruff-пин+3.14, SPEC AI-п.11, строгая валидация сегментов, asr-skip, wiki-public, TODO-чекбоксы
+- [x] Хвосты оркестратора: classifier 3.14, `uv lock --check` чисто; Gates: pytest 191, ruff clean
 - [x] Бейджи (CI/0.2.0/Python/MIT) + Оглавление с якорями + Highlights с demo + FAQ (строго по коду)
 - [x] Тест якорей TOC + маркеры; только README + test_readme; Gates: pytest 190, ruff clean
 - [ ] Бейджи (CI, версия, Python, лицензия), оглавление, highlights, скриншот-описание report.html, демо-сессия, FAQ; без битых ссылок/флагов (тест флагов должен остаться зелёным)

@@ -10,6 +10,7 @@ from __future__ import annotations
 import csv
 import io
 import json
+import math
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -24,12 +25,22 @@ EXPORT_FORMATS = ("jsonl", "csv")
 
 
 def _is_segment(item: Any) -> bool:
-    """Сегмент пригоден: dict с числовыми start/duration и строкой text."""
+    """Сегмент пригоден: dict со строкой text и конечными start/duration >= 0.
+
+    Решение: строгость осознанная — `type(x) in (int, float)` исключает bool;
+    NaN/Inf не конечны (`math.isfinite`); отрицательный start запрещён:
+    таймкод не может быть отрицательным, такой сегмент — битый.
+    """
+    if not isinstance(item, dict) or not isinstance(item.get("text"), str):
+        return False
+    start, duration = item.get("start"), item.get("duration")
+    if type(start) not in (int, float) or type(duration) not in (int, float):
+        return False
     return (
-        isinstance(item, dict)
-        and isinstance(item.get("start"), (int, float))
-        and isinstance(item.get("duration"), (int, float))
-        and isinstance(item.get("text"), str)
+        math.isfinite(start)
+        and math.isfinite(duration)
+        and start >= 0
+        and duration >= 0
     )
 
 

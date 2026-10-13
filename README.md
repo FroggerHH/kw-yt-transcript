@@ -309,7 +309,7 @@ kw-yt serve /tmp/kw-live --port 8000            # http://127.0.0.1:8000, вых�
 
 ```bash
 uv sync                                            # окружение по uv.lock
-uv run --no-project --with pytest -- python -m pytest -q -p no:cacheprovider
-uvx ruff check kw_yt_transcript tests              # линт (select E/F/W/I/UP в pyproject)
+uv run --locked --with pytest -- python -m pytest -q -p no:cacheprovider
+uvx ruff@0.14.5 check kw_yt_transcript tests        # линт (select E/F/W/I/UP в pyproject)
 python -m kw_yt_transcript --help
 ```

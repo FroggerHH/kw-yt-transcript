@@ -1,5 +1,6 @@
 """Тесты asr.transcribe_whisper со stub-моделью/загрузчиком: без сети, ffmpeg, HOME."""
 
+import importlib.util
 import sys
 
 import pytest
@@ -86,6 +87,8 @@ def test_missing_faster_whisper_russian_error(tmp_path):
 
 
 def test_default_factory_without_extra_raises_asr_error(tmp_path):
+    if importlib.util.find_spec("faster_whisper") is not None:
+        pytest.skip("faster_whisper установлен — тест изоляции без extra неприменим")
     assert "faster_whisper" not in sys.modules
     audio = tmp_path / "audio.mp3"
     audio.write_bytes(b"fake-audio")

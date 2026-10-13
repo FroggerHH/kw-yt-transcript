@@ -131,3 +131,25 @@ def test_cli_export_csv_no_summary_and_errors(tmp_path):
     empty = tmp_path / "empty"
     empty.mkdir()
     assert cli_mod.main(["export", "--in", str(empty)]) == 1
+
+
+def test_strict_segment_validation_skips_bad_numbers(tmp_path):
+    cases = [
+        [{"text": "t", "start": True, "duration": 1.0}],
+        [{"text": "t", "start": float("nan"), "duration": 1.0}],
+        [{"text": "t", "start": 0.0, "duration": float("inf")}],
+        [{"text": "t", "start": -1.0, "duration": 1.0}],
+        [{"text": "t", "start": 0.0, "duration": -0.5}],
+    ]
+    root = tmp_path / "out"
+    for i, segs in enumerate(cases):
+        d = root / f"v_{i}"
+        d.mkdir(parents=True)
+        (d / "transcript.json").write_text(json.dumps(segs, ensure_ascii=False), encoding="utf-8")
+        (d / "meta.json").write_text(
+            json.dumps({"video_id": f"id{i}"}, ensure_ascii=False), encoding="utf-8"
+        )
+    videos, skipped = export_mod.collect_corpus(root)
+    assert videos == []
+    assert len(skipped) == 5
+    assert export_mod._is_segment({"text": "t", "start": 0, "duration": 0}) is True

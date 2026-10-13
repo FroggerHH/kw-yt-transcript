@@ -252,7 +252,7 @@ Current version: 0.2.0 (`kw-yt --version`).
 
 ```bash
 uv sync                                            # environment from uv.lock
-uv run --no-project --with pytest -- python -m pytest -q -p no:cacheprovider
-uvx ruff check kw_yt_transcript tests              # lint (select E/F/W/I/UP in pyproject)
+uv run --locked --with pytest -- python -m pytest -q -p no:cacheprovider
+uvx ruff@0.14.5 check kw_yt_transcript tests        # lint (select E/F/W/I/UP in pyproject)
 python -m kw_yt_transcript --help
 ```

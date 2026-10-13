@@ -28,6 +28,7 @@
 8. **Поиск по корпусу:** `kw-yt search <запрос> --in ./out` — вхождения с контекстом `±N сек`, ранжирование по числу вхождений, RU-вывод, exit 0/1 (нашёл/нет).
 9. **Просмотр корпуса:** `kw-yt serve ./out [--port]` — stdlib HTTP-сервер по готовым index.html/report.html.
 10. **Скорость/надёжность batch:** `--jobs N` (параллельно, порядок в index стабильный), `--resume` (пропуск готовых папок), кэш метаданных с TTL, конфиг `~/.config/kw-yt/config.toml` (langs, out, jobs, whisper-model).
+11. **AI-маркировка машинного текста:** `origin` auto/whisper маркируется ⚠ в `report.html`/MD/TXT («распознан ИИ»); `jsonl`/`csv`/search-выдача — без примесей, только данные.
 12. **Экспортные форматы:** `jsonl` (строки `{video_id,title,start,duration,text}` для RAG) и `csv` (таблица) в `--format`/`FORMATS` + `contrib/kw-yt-completion.bash`.
 13. **Сводный экспорт:** `kw-yt export` — склейка `*/transcript.json` в один `corpus.jsonl/csv` + `summary.json` (счётчики, `by_origin`, `skipped`); пустой корпус → exit 1.
 14. **Сводная статистика:** `kw-yt stats` — таблица/JSON по корпусу (видео, реплики, слова, минуты, `by_origin`/`by_lang`) без скачивания; пустой корпус → exit 1.
