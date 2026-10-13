@@ -18,8 +18,8 @@
 - [x] Волна 10 (fix-3): CHANGELOG 0.2.0 (волны 8–9 + review-циклы, счётчик 181). Gates: 181 passed.
 - [x] ASR av-fallback + VAD-цепочка (fix-3): live Whisper-tiny → origin whisper, 75 сегментов. Gates: 186 passed + 2 skipped, ruff clean.
 - [x] GitHub: аудит чист, репозиторий PUBLIC, main запушен (FroggerHH/kw-yt-transcript).
-- [ ] Wiki-remote not found (провиженинг): 7 страниц готовы локально, повтор перед done.
-- [ ] Волны 12 (CI) + 13 (AI-warning) → fixer; затем done + отчёт.
+- [x] Волна 11 (GitHub): аудит чист, PUBLIC, main запушен. Wiki: 7 страниц готовы + зеркало docs/wiki в main; remote not found >20 мин → BLOCKED (user-step: создать первую страницу в web-wiki).
+- [x] Done: дерево чистое, всё запушено; детали — финальный отчёт.
 - [x] Волны 12 (CI: push/PR, matrix 3.11–3.13, pytest+ruff, бейдж) + 13 (AI-warning: README-плашка, баннер report, строки md/txt) (fix-3). Gates: 188 passed + 2 skipped, ruff clean, YAML валиден.
 - [x] Волна 14 (fix-3): uv-миграция (uv.lock 35 пакетов, .python-version 3.14, CI setup-uv, README uv-first). Gates: sync чисто, 188 passed, ruff clean.
 - [x] Волна 15 (fix-3, retry после rate limit): README_EN.md 1:1 + шапки-ссылки + тест EN. Gates: 189 passed, ruff clean.

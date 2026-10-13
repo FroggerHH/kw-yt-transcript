@@ -50,11 +50,11 @@
 ## Волна 10: CHANGELOG [x] (done, 181 passed, fix-3)
 - [x] Запись 0.2.0: волны 8–9 + review-циклы, счётчик 181; grep «Волна» = 9
 
-## Волна 11: GitHub + wiki [~] (репозиторий ПУБЛИЧНЫЙ, wiki ждёт провиженинга)
+## Волна 11: GitHub + wiki [~] (репозиторий PUBLIC + main запушен; wiki — blocked, контент сохранён)
 - [x] Аудит секретов чист (только упоминание пути); `gh repo edit --visibility public` → PUBLIC
 - [x] `git push -u origin main` — вся история на GitHub (FroggerHH/kw-yt-transcript)
-- [ ] Wiki-remote `...wiki.git` всё ещё not found (и 403 ранее) — страницы готовы в /tmp/opencode/kw-wiki (7 шт)
-- [ ] Повтор клона перед done; иначе user-step: открыть вкладку Wiki один раз
+- [x] 7 wiki-страниц готовы (/tmp/opencode/kw-wiki) + зеркало docs/wiki/ запушено в main (d09f4fa)
+- [ ] BLOCKED (GitHub): `...wiki.git` not found >20 мин (wiki:true, репо public). User-step: открыть https://github.com/FroggerHH/kw-yt-transcript/wiki → «Create the first page» (текст — docs/wiki/Home.md) → remote появится → следующая сессия пушит остальные
 - [x] /tmp/kw-final: pip install . → 0.2.0, 5×--help exit 0, pip check чисто
 - [x] Live: fetch exit 0 (10 файлов), export 61/487, stats таблица, search 38, serve 200
 
