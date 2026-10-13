@@ -88,6 +88,8 @@ def test_readme_required_sections():
         "config.toml",
         "--color",
         "kw-yt completion",
+        "kw-yt update",
+        "--check",
         "docs/demo/",
         "Быстрый старт",
         "Участие в разработке",

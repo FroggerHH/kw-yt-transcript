@@ -197,3 +197,17 @@ tests/           — stubs yt-dlp/transcript/whisper, без сети (M5: XDG t
   «сервер виден всей локальной сети» (без автоопределения LAN-IP).
 - CLI `--host HOST` в serve-парсере (дефолт 127.0.0.1); валидация через
   `socket.getaddrinfo` до бинда (мусор → exit 2).
+
+## v0.2 Волна 26 (kw-yt update, аддитивно)
+- `update.py`: `detect_install()` (порядок pipx → uv-tool → source → pip →
+  unknown; source — pyproject+.git вверх от `__file__`, pip — метаданные
+  importlib с dist-info в site-packages), `remote_version()` (pyproject с main
+  через urllib+tomllib, таймаут 20, fetcher-инъекция, ошибки → UpdateError),
+  свой tuple-парсинг версий (несравнимые — обновление доступно, с причиной),
+  `build_command`/`run_update` (runner-инъекция; fallback upgrade→install
+  из git для pipx/uv-tool; source — `git -C <root> pull --ff-only` + hint
+  `uv sync`; unknown — инструкция, exit 1).
+- CLI `update [--check]`: check — детект + сравнение, exit 0 при успехе;
+  полный — уже свежее 0, обновлено 0, ошибка 1. Сеть только в remote_version.
+- Безопасность: никаких скачиваний бинарей, кроме официальных каналов
+  (pipx/uv/pip из git-источника, git pull из своего репо).

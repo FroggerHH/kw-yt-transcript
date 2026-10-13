@@ -79,3 +79,6 @@ options:
 
    kw-yt completion bash
        Bash-completion в stdout: eval "$(kw-yt completion bash)".
+
+   kw-yt update
+       Обновить тем же способом, каким установлено (или --check без обновления).

@@ -172,7 +172,9 @@
 - [x] serve_dir(root, port, host=127.0.0.1); cli --host (getaddrinfo-валидация, exit 2); не-loopback → LAN-предупреждение
 - [x] tests +5 (бинд 0.0.0.0, warning, мусор/пусто, passthrough); README(EN)/completion/demo/ARCH; Gates + live smoke 200
 
-## Волна 26: kw-yt update [ ] (queued, ПОСЛЕ волны 25 — трогает cli.py)
+## Волна 26: kw-yt update [x] (done 18:28, 276 passed, fix-4)
+- [x] update.py (детект pipx/uv-tool/source/pip/unknown, версия с GitHub, runner-инъекция); cli update --check; 25 тестов
+- [x] README(EN)/completion/demo/ARCH; Gates + live --check (source, 0.2.0, свежее)
 - [ ] update.py: детект установки (pipx-venv / uv-tools / pip-site / source-checkout по .git / system) + свежая версия (raw pyproject с GitHub main через tomllib) + `--check` (только показать) и полный режим (переустановка из GitHub: pipx/uv/pip reinstall, source → git pull --ff-only; всё через явные сабпроцессы с русскими ошибками)
 - [ ] cli update (+--check), exit-коды (0 ok/уже свежее, 1 ошибка), tests (стабы сабпроцессов/сети/файлов, без реальных установок), README(EN)/completion/ARCH
 - [ ] Gates: pytest зелёный, ruff чисто; live: `kw-yt update --check` на реальной установке (только чтение, без изменений)

@@ -4,7 +4,8 @@
 (или Whisper-fallback) → write_video + index.json.
 Субкоманды: `search` (поиск по корпусу), `serve` (просмотр корпуса),
 `export` (сводный файл корпуса + summary.json), `stats` (сводка корпуса),
-`library`/`clean` (собственное хранилище), `completion` (bash-completion).
+`library`/`clean` (собственное хранилище), `completion` (bash-completion),
+`update` (самообновление тем же способом установки).
 Иначе — старое fetch-поведение. Импорты yt-dlp/transcript/whisper — лениво,
 поэтому --help работает без сети и опциональных зависимостей.
 """
@@ -29,6 +30,7 @@ from kw_yt_transcript import search as search_mod
 from kw_yt_transcript import sections as sections_mod
 from kw_yt_transcript import serve as serve_mod
 from kw_yt_transcript import storage as storage_mod
+from kw_yt_transcript import update as update_mod
 from kw_yt_transcript.inputs import parse_inputs_with_errors
 from kw_yt_transcript.metadata import MetadataError
 from kw_yt_transcript.transcript import NoTranscriptError
@@ -196,6 +198,9 @@ EXAMPLES = """Примеры:
 
    kw-yt completion bash
        Bash-completion в stdout: eval "$(kw-yt completion bash)".
+
+   kw-yt update
+       Обновить тем же способом, каким установлено (или --check без обновления).
 """
 
 
@@ -477,6 +482,21 @@ def build_completion_parser() -> argparse.ArgumentParser:
     return p
 
 
+def build_update_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(
+        prog="kw-yt update",
+        description="Обновить kw-yt тем же способом, каким установлено.",
+        formatter_class=_ColorHelpFormatter,
+    )
+    p.add_argument(
+        "--check",
+        action="store_true",
+        help="Только проверить: способ установки и свежесть версии, без обновления.",
+    )
+    _add_color_args(p)
+    return p
+
+
 def _completion_parsers() -> dict[str, argparse.ArgumentParser]:
     """Субкоманда -> парсер. Единственный источник флагов для completion."""
     return {
@@ -488,6 +508,7 @@ def _completion_parsers() -> dict[str, argparse.ArgumentParser]:
         "library": build_library_parser(),
         "clean": build_clean_parser(),
         "completion": build_completion_parser(),
+        "update": build_update_parser(),
     }
 
 
@@ -712,8 +733,9 @@ def _load_ready_record(video_dir: Path) -> dict[str, Any]:
 def main(argv: list[str] | None = None) -> int:
     """Точка входа. Коды: 0 — всё ок, 1 — частичные ошибки/не найдено, 2 — usage.
 
-    Субкоманды `search`/`serve`/`export`/`stats`/`library`/`clean`/`completion`
-    — по argv[1], иначе fetch-поведение (скачивание в библиотеку по умолчанию).
+    Субкоманды `search`/`serve`/`export`/`stats`/`library`/`clean`/`completion`/
+    `update` — по argv[1], иначе fetch-поведение (скачивание в библиотеку
+    по умолчанию).
     Fetch пишет в stderr, stdout пуст; search печатает результаты в stdout;
     serve печатает URL в stdout; export печатает сводку в stdout; stats — таблицу/JSON.
     """
@@ -732,6 +754,8 @@ def main(argv: list[str] | None = None) -> int:
         return _main_clean(argv)
     if argv and argv[0] == "completion":
         return _main_completion(argv)
+    if argv and argv[0] == "update":
+        return _main_update(argv)
     return _main_fetch(argv)
 
 
@@ -1268,6 +1292,42 @@ def _main_completion(argv: list[str]) -> int:
         return 2
     print(render_bash_completion(), end="")
     return 0
+
+
+def _main_update(argv: list[str]) -> int:
+    """Самообновление: --check — детект + сравнение (exit 0 при успехе).
+
+    Полный прогон: уже свежее — 0, обновлено — код run_update (0/1),
+    несравнимое — принудительно обновить, сеть упала — 1.
+    """
+    _init_color(argv)
+    args = build_update_parser().parse_args(argv[1:])
+    info = update_mod.detect_install()
+    kind, detail = info.get("kind", "unknown"), info.get("detail", "")
+    try:
+        remote = update_mod.remote_version()
+    except update_mod.UpdateError as e:
+        _error(str(e))
+        return 1
+    cmp = update_mod.compare_versions(__version__, remote)
+    if args.check:
+        print(f"Установка: {kind} ({detail}). Локально: {__version__}, сервер: {remote}.")
+        if cmp is None:
+            print("Версии несравнимы — считаем, что обновление доступно.")
+        elif cmp < 0:
+            print("Доступно обновление: kw-yt update.")
+        else:
+            print("Уже свежее.")
+        return 0
+    if cmp is not None and cmp >= 0:
+        print(f"Уже свежее: {__version__} (на сервере {remote}).")
+        return 0
+    if cmp is None:
+        print(
+            f"Версии несравнимы (локально {__version__!r}, сервер {remote!r}) — "
+            "обновляю принудительно."
+        )
+    return update_mod.run_update(kind, detail)
 
 
 if __name__ == "__main__":

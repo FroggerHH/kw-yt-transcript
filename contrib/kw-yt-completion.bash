@@ -53,8 +53,12 @@ _kw_yt() {
             COMPREPLY=( $(compgen -W "--color --help --in --json --no-color -h" -- "$cur") )
             return 0
             ;;
+        update)
+            COMPREPLY=( $(compgen -W "--check --color --help --no-color -h" -- "$cur") )
+            return 0
+            ;;
         "")
-            COMPREPLY=( $(compgen -W "--color --format --from --from-file --help --jobs --langs --no-color --no-fallback-whisper --out --resume --to --version --whisper-model -h -j -o clean completion export library search serve stats" -- "$cur") )
+            COMPREPLY=( $(compgen -W "--color --format --from --from-file --help --jobs --langs --no-color --no-fallback-whisper --out --resume --to --version --whisper-model -h -j -o clean completion export library search serve stats update" -- "$cur") )
             return 0
             ;;
     esac

@@ -62,6 +62,24 @@ pip install -U .                        # was pip install . (from the repo dir)
 Same check after updating: `kw-yt --version` shows the new version
 (compare with CHANGELOG.md).
 
+`kw-yt update` upgrades the same way it was installed (auto-detected, network
+only to read the version from GitHub):
+
+```bash
+kw-yt update
+```
+
+| Installed via | What runs |
+|---|---|
+| `pipx` | `pipx upgrade kw-yt-transcript` (not in PATH — install from git) |
+| `uv tool` | `uv tool upgrade kw-yt-transcript` (otherwise — reinstall from git) |
+| `pip` | install from git with the same python |
+| sources (`git`) | `git pull --ff-only`, then an `uv sync` hint |
+| unknown | Russian manual instructions (exit 1) |
+
+Dry check — the `--check` flag: shows the install kind and version freshness,
+exit 0. Full update: already fresh — 0, error — 1.
+
 > If on Python 3.14 faster-whisper crashes with `TypeError: ... metadata_errors ...`
 > (PyAV ≥ 15 is incompatible with faster-whisper 1.2.1) — nothing to do:
 > `kw-yt` decodes audio with system `ffmpeg` itself and passes ready samples
