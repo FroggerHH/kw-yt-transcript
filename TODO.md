@@ -67,7 +67,10 @@
 - [ ] Gates: pytest зелёный (миграция дефолта --out не должна сломать старые тесты — обновить консистентно), ruff чисто, live: fetch без --out → библиотека, report открывается с текстом первым
 - [ ] Live-видео от пользователя (после волны 19): `https://www.youtube.com/watch?v=DbWL6Zs2j_g` — полный прогон + report-хаб + библиотека
 
-## Волна 20: Цветной вывод [ ] (queued, ПОСЛЕ волны 19 — правит cli.py/help)
+## Волна 20: Цветной вывод [x] (done 17:51, 215 passed, fix-3)
+- [x] stdlib-ANSI: _supports_color (TTY, NO_COLOR/TERM/--no-color), _ColorHelpFormatter (_set_color!), ok/FAIL/ошибки; сводки plain
+- [x] tests/test_cli_color.py (8): TTY/пайп/NO_COLOR/TERM/--no-color, exit-коды; находка: Python 3.14 красит help нативно
+- [x] Gates: pytest 215, ruff clean, пайп без ESC
 - [ ] Проблема: `uv tool install` даёт бесцветный --help (argparse без цветов везде). Решение stdlib-ANSI: подсветка help (usage/секции/опции) + прогресс/ok/fail; TTY-детект, NO_COLOR + --no-color, пайп — без цветов
 - [ ] tests: цвета на TTY-стабе, тишина на пайпе/NO_COLOR; README-строка; Gates: pytest зелёный
 

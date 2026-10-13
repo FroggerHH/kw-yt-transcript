@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 import threading
@@ -41,6 +42,80 @@ _WHISPER_SEM = threading.Semaphore(2)
 
 #: Диапазон --jobs.
 _JOBS_MIN, _JOBS_MAX = 1, 16
+
+#: ANSI-коды цвета (только stdlib, без зависимостей).
+_RED, _GREEN, _BOLD = "31", "32", "1"
+
+#: --no-color текущего прогона (выставляется в _init_color до parse_args,
+#: т.к. подсветка help происходит внутри argparse).
+_NO_COLOR = False
+
+
+def _init_color(argv: list[str] | None) -> None:
+    """Запомнить --no-color из сырых аргументов (до parse_args)."""
+    global _NO_COLOR
+    _NO_COLOR = "--no-color" in list(argv or [])
+
+
+def _supports_color(file=None) -> bool:
+    """Цвета разрешены: TTY + нет --no-color/NO_COLOR/TERM=dumb."""
+    if _NO_COLOR:
+        return False
+    if os.environ.get("NO_COLOR"):
+        return False
+    if os.environ.get("TERM") == "dumb":
+        return False
+    stream = file if file is not None else sys.stdout
+    try:
+        return bool(stream.isatty())
+    except Exception:
+        return False
+
+
+def _c(text: str, code: str, file=None) -> str:
+    """Обернуть текст в ANSI-цвет (без цвета — вернуть как есть)."""
+    if not _supports_color(file):
+        return text
+    return f"\033[{code}m{text}\033[0m"
+
+
+def _error(text: str) -> None:
+    """Ошибка в stderr с красным префиксом (без TTY — plain)."""
+    print(f"{_c('Ошибка:', _RED, file=sys.stderr)} {text}", file=sys.stderr, flush=True)
+
+
+class _ColorHelpFormatter(argparse.RawDescriptionHelpFormatter):
+    """--help с подсветкой: usage + заголовки секций + строки опций (только TTY)."""
+
+    def __init__(self, *args, **kwargs):
+        # Python 3.14+: stdlib красит help сам (тема argparse) — гасим его,
+        # когда наши цвета выключены (--no-color/NO_COLOR/не TTY).
+        try:
+            super().__init__(*args, color=_supports_color(), **kwargs)
+        except TypeError:
+            super().__init__(*args, **kwargs)  # Python < 3.14: параметра color нет
+
+    def _set_color(self, color):
+        # Python 3.14+: ArgumentParser перевыставляет цвет форматтера
+        # из своего self.color ПОСЛЕ __init__ — глушим здесь же, чтобы
+        # --no-color/NO_COLOR/не-TTY гасили и stdlib-тему тоже.
+        try:
+            super()._set_color(bool(color) and _supports_color())
+        except AttributeError:
+            pass  # Python < 3.14: _set_color нет, красим вручную ниже
+
+    def format_usage(self, usage, actions, groups, prefix):
+        if prefix is None:
+            prefix = "usage: "
+        return super().format_usage(usage, actions, groups, _c(prefix, _BOLD))
+
+    def start_section(self, heading):
+        if heading is not None:
+            heading = _c(heading, _BOLD)
+        return super().start_section(heading)
+
+    def _format_action_invocation(self, action):
+        return _c(super()._format_action_invocation(action), _GREEN)
 
 EXAMPLES = """Примеры:
    kw-yt dQw4w9WgXcQ
@@ -86,7 +161,7 @@ def build_parser() -> argparse.ArgumentParser:
         prog="kw-yt",
         description="Скачивание метаданных и транскриптов видео YouTube.",
         epilog=EXAMPLES,
-        formatter_class=argparse.RawDescriptionHelpFormatter,
+        formatter_class=_ColorHelpFormatter,
     )
     p.add_argument(
         "inputs",
@@ -149,6 +224,11 @@ def build_parser() -> argparse.ArgumentParser:
         version=f"%(prog)s {__version__}",
         help="Показать версию и выйти.",
     )
+    p.add_argument(
+        "--no-color",
+        action="store_true",
+        help="Отключить цвета в выводе (то же, что NO_COLOR=1).",
+    )
     return p
 
 
@@ -156,6 +236,7 @@ def build_search_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="kw-yt search",
         description="Поиск по сохранённым транскриптам корпуса.",
+        formatter_class=_ColorHelpFormatter,
     )
     p.add_argument(
         "query",
@@ -181,6 +262,11 @@ def build_search_parser() -> argparse.ArgumentParser:
         default=None,
         help="Максимум видео в выдаче (по умолчанию 20).",
     )
+    p.add_argument(
+        "--no-color",
+        action="store_true",
+        help="Отключить цвета в выводе (то же, что NO_COLOR=1).",
+    )
     return p
 
 
@@ -188,6 +274,7 @@ def build_serve_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="kw-yt serve",
         description="Раздавать готовый корпус (index.html/report.html) по HTTP.",
+        formatter_class=_ColorHelpFormatter,
     )
     p.add_argument(
         "directory",
@@ -201,6 +288,11 @@ def build_serve_parser() -> argparse.ArgumentParser:
         default=None,
         help="Порт (по умолчанию 8000, 0 — выбрать автоматически).",
     )
+    p.add_argument(
+        "--no-color",
+        action="store_true",
+        help="Отключить цвета в выводе (то же, что NO_COLOR=1).",
+    )
     return p
 
 
@@ -208,6 +300,7 @@ def build_export_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="kw-yt export",
         description="Сводный экспорт корпуса в один файл (для RAG и анализа).",
+        formatter_class=_ColorHelpFormatter,
     )
     p.add_argument(
         "--in",
@@ -239,6 +332,11 @@ def build_export_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Не писать summary.json.",
     )
+    p.add_argument(
+        "--no-color",
+        action="store_true",
+        help="Отключить цвета в выводе (то же, что NO_COLOR=1).",
+    )
     return p
 
 
@@ -246,6 +344,7 @@ def build_stats_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="kw-yt stats",
         description="Сводная статистика корпуса (без скачивания).",
+        formatter_class=_ColorHelpFormatter,
     )
     p.add_argument(
         "--in",
@@ -259,6 +358,11 @@ def build_stats_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Вывести сводку JSON вместо таблицы.",
     )
+    p.add_argument(
+        "--no-color",
+        action="store_true",
+        help="Отключить цвета в выводе (то же, что NO_COLOR=1).",
+    )
     return p
 
 
@@ -266,11 +370,17 @@ def build_library_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="kw-yt library",
         description="Список библиотеки: видео с размерами и источниками.",
+        formatter_class=_ColorHelpFormatter,
     )
     p.add_argument(
         "--json",
         action="store_true",
         help="Вывести список JSON вместо таблицы.",
+    )
+    p.add_argument(
+        "--no-color",
+        action="store_true",
+        help="Отключить цвета в выводе (то же, что NO_COLOR=1).",
     )
     return p
 
@@ -279,6 +389,7 @@ def build_clean_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="kw-yt clean",
         description="Удалить видео из библиотеки и/или кэш метаданных.",
+        formatter_class=_ColorHelpFormatter,
     )
     p.add_argument(
         "ids",
@@ -305,6 +416,11 @@ def build_clean_parser() -> argparse.ArgumentParser:
         "--cache",
         action="store_true",
         help="Вычистить также XDG-кэш метаданных.",
+    )
+    p.add_argument(
+        "--no-color",
+        action="store_true",
+        help="Отключить цвета в выводе (то же, что NO_COLOR=1).",
     )
     return p
 
@@ -453,22 +569,21 @@ def main(argv: list[str] | None = None) -> int:
 
 def _main_fetch(argv: list[str]) -> int:
     """Классический прогон: скачать метаданные и транскрипты."""
+    _init_color(argv)
     args = build_parser().parse_args(argv)
     cfg = config_mod.load_config()
 
     try:
         jobs, input_errors = parse_inputs_with_errors(args.inputs, from_file=args.from_file)
     except ValueError as e:
-        print(f"Ошибка: {e}", file=sys.stderr, flush=True)
+        _error(f"{e}")
         return 2
 
     if not jobs and not input_errors and args.from_file is None:
-        print(
-            "Ошибка: не указаны входные данные. "
+        _error(
+            "не указаны входные данные. "
             "Передайте video id / URL или используйте --from-file. "
-            "См. kw-yt --help.",
-            file=sys.stderr,
-            flush=True,
+            "См. kw-yt --help."
         )
         return 2
 
@@ -479,11 +594,9 @@ def _main_fetch(argv: list[str]) -> int:
         langs = ["ru", "en"]
     bad_langs = [lang for lang in langs if not _LANG_RE.match(lang)]
     if bad_langs:
-        print(
-            f"Ошибка: неверные языки в --langs: {', '.join(bad_langs)}. "
-            "Ожидаются коды вида 'ru', 'en', 'en-us' (латиница/дефис, 2–12 символов).",
-            file=sys.stderr,
-            flush=True,
+        _error(
+            f"неверные языки в --langs: {', '.join(bad_langs)}. "
+            "Ожидаются коды вида 'ru', 'en', 'en-us' (латиница/дефис, 2–12 символов)."
         )
         return 2
     whisper_model = str(
@@ -492,7 +605,7 @@ def _main_fetch(argv: list[str]) -> int:
         else cfg.get("whisper_model", "small")
     ).strip()
     if not whisper_model:
-        print("Ошибка: --whisper-model не должен быть пустым.", file=sys.stderr, flush=True)
+        _error("--whisper-model не должен быть пустым.")
         return 2
     jobs_raw = args.jobs if args.jobs is not None else cfg.get("jobs", 4)
     try:
@@ -500,11 +613,9 @@ def _main_fetch(argv: list[str]) -> int:
     except (TypeError, ValueError):
         jobs_n = 0
     if not (_JOBS_MIN <= jobs_n <= _JOBS_MAX):
-        print(
-            f"Ошибка: --jobs должен быть целым числом от {_JOBS_MIN} до {_JOBS_MAX}, "
-            f"получено {jobs_raw!r}.",
-            file=sys.stderr,
-            flush=True,
+        _error(
+            f"--jobs должен быть целым числом от {_JOBS_MIN} до {_JOBS_MAX}, "
+            f"получено {jobs_raw!r}."
         )
         return 2
     use_whisper = not args.no_fallback_whisper
@@ -519,7 +630,7 @@ def _main_fetch(argv: list[str]) -> int:
             out_dir.mkdir(parents=True, exist_ok=True)
             outputs.write_index(out_dir, [], None)
         except OSError as e:
-            print(f"Ошибка: не могу записать index.json: {e}", file=sys.stderr, flush=True)
+            _error(f"не могу записать index.json: {e}")
         print(
             "Предупреждение: во входах нет видео — нечего обрабатывать.",
             file=sys.stderr,
@@ -535,14 +646,14 @@ def _main_fetch(argv: list[str]) -> int:
         leading.append(
             {"meta": None, "dir": None, "origin": None, "transcript_lang": None, "error": err}
         )
-        print(f"вход: FAIL: {err}", file=sys.stderr)
+        print(f"вход: {_c('FAIL', _RED, file=sys.stderr)}: {err}", file=sys.stderr)
     if not jobs:
         return 2
 
     try:
         out_dir.mkdir(parents=True, exist_ok=True)
     except OSError as e:
-        print(f"Ошибка: не могу создать папку {out_dir!r}: {e}", file=sys.stderr, flush=True)
+        _error(f"не могу создать папку {out_dir!r}: {e}")
         return 2
 
     # План в порядке входов: ("video", (source, hint)) или ("done", result).
@@ -571,7 +682,7 @@ def _main_fetch(argv: list[str]) -> int:
                         },
                     )
                 )
-                print(f"плейлист {url}: FAIL: {e}", file=sys.stderr)
+                print(f"плейлист {url}: {_c('FAIL', _RED, file=sys.stderr)}: {e}", file=sys.stderr)
                 continue
             for item in items:
                 if item.get("error") or not item.get("url"):
@@ -611,11 +722,11 @@ def _main_fetch(argv: list[str]) -> int:
     )
 
     if not plan and not leading:
-        print("Ошибка: по заданным входам видео не найдено.", file=sys.stderr, flush=True)
+        _error("по заданным входам видео не найдено.")
         try:
             outputs.write_index(out_dir, [], index_playlist_url)
         except OSError as e:
-            print(f"Ошибка: не могу записать index.json: {e}", file=sys.stderr, flush=True)
+            _error(f"не могу записать index.json: {e}")
         return 2
 
     # --resume: готовые папки (meta+transcript+report) — в слоты без сети.
@@ -683,12 +794,14 @@ def _main_fetch(argv: list[str]) -> int:
                 with _PRINT_LOCK:
                     if result["error"]:
                         print(
-                            f"[{vnums[p]}/{n_videos}] {label} ... FAIL: {result['error']}",
+                            f"[{vnums[p]}/{n_videos}] {label} ... "
+                            f"{_c('FAIL', _RED, file=sys.stderr)}: {result['error']}",
                             file=sys.stderr,
                         )
                     else:
                         print(
-                            f"[{vnums[p]}/{n_videos}] {result['meta'].get('video_id')} ... ok",
+                            f"[{vnums[p]}/{n_videos}] {result['meta'].get('video_id')} ... "
+                            f"{_c('ok', _GREEN, file=sys.stderr)}",
                             file=sys.stderr,
                         )
 
@@ -698,7 +811,7 @@ def _main_fetch(argv: list[str]) -> int:
     try:
         outputs.write_index(out_dir, results, index_playlist_url)
     except OSError as e:
-        print(f"Ошибка: не могу записать index.json: {e}", file=sys.stderr, flush=True)
+        _error(f"не могу записать index.json: {e}")
         return 2
 
     failed = sum(1 for r in results if r["error"])
@@ -712,41 +825,34 @@ def _main_fetch(argv: list[str]) -> int:
 
 def _main_search(argv: list[str]) -> int:
     """Поиск по корпусу: группы «заголовок + mm:ss текст», exit 0/1."""
+    _init_color(argv)
     args = build_search_parser().parse_args(argv[1:])
     cfg = config_mod.load_config()
     root = storage_mod.resolve_root(args.in_dir, cfg)
     if not Path(root).is_dir():
-        print(f"Ошибка: папка корпуса не найдена: {root}.", file=sys.stderr, flush=True)
+        _error(f"папка корпуса не найдена: {root}.")
         return 2
     try:
         context_sec = 15.0 if args.context is None else float(str(args.context).strip())
     except (TypeError, ValueError):
-        print(
-            f"Ошибка: --context должен быть числом секунд, получено {args.context!r}.",
-            file=sys.stderr,
-            flush=True,
-        )
+        _error(f"--context должен быть числом секунд, получено {args.context!r}.")
         return 2
     if context_sec < 0:
-        print("Ошибка: --context не должен быть отрицательным.", file=sys.stderr, flush=True)
+        _error("--context не должен быть отрицательным.")
         return 2
     try:
         limit = 20 if args.limit is None else int(str(args.limit).strip())
     except (TypeError, ValueError):
-        print(
-            f"Ошибка: --limit должен быть целым числом, получено {args.limit!r}.",
-            file=sys.stderr,
-            flush=True,
-        )
+        _error(f"--limit должен быть целым числом, получено {args.limit!r}.")
         return 2
     if limit < 1:
-        print("Ошибка: --limit должен быть >= 1.", file=sys.stderr, flush=True)
+        _error("--limit должен быть >= 1.")
         return 2
     query = " ".join(args.query).strip()
     try:
         found = search_mod.search_corpus(root, query, context_sec=context_sec, limit=limit)
     except ValueError as e:
-        print(f"Ошибка: {e}", file=sys.stderr, flush=True)
+        _error(f"{e}")
         return 2
     if not found:
         print(f"По запросу «{query}» ничего не найдено.", flush=True)
@@ -767,51 +873,45 @@ def _main_search(argv: list[str]) -> int:
 
 def _main_serve(argv: list[str]) -> int:
     """Просмотр корпуса через HTTP."""
+    _init_color(argv)
     args = build_serve_parser().parse_args(argv[1:])
     cfg = config_mod.load_config()
     root = storage_mod.resolve_root(args.directory, cfg)
     try:
         port = 8000 if args.port is None else int(str(args.port).strip())
     except (TypeError, ValueError):
-        print(
-            f"Ошибка: --port должен быть целым числом, получено {args.port!r}.",
-            file=sys.stderr,
-            flush=True,
-        )
+        _error(f"--port должен быть целым числом, получено {args.port!r}.")
         return 2
     if not (0 <= port <= 65535):
-        print(
-            f"Ошибка: --port должен быть от 0 до 65535, получено {args.port!r}.",
-            file=sys.stderr,
-            flush=True,
-        )
+        _error(f"--port должен быть от 0 до 65535, получено {args.port!r}.")
         return 2
     return serve_mod.serve_dir(root, port)
 
 
 def _main_export(argv: list[str]) -> int:
     """Сводный экспорт корпуса: один файл + summary.json, exit 0/1/2."""
+    _init_color(argv)
     args = build_export_parser().parse_args(argv[1:])
     cfg = config_mod.load_config()
     root = storage_mod.resolve_root(args.in_dir, cfg)
     if not Path(root).is_dir():
-        print(f"Ошибка: папка корпуса не найдена: {root}.", file=sys.stderr, flush=True)
+        _error(f"папка корпуса не найдена: {root}.")
         return 2
     out_path = Path(args.out) if args.out else Path(root) / f"corpus.{args.format}"
     try:
         summary = export_mod.export_corpus(root, out_path, args.format)
     except ValueError as e:
-        print(f"Ошибка: {e}", file=sys.stderr, flush=True)
+        _error(f"{e}")
         return 1
     except OSError as e:
-        print(f"Ошибка: не пишется файл {out_path}: {e}", file=sys.stderr, flush=True)
+        _error(f"не пишется файл {out_path}: {e}")
         return 1
     if not args.no_summary:
         summary_path = Path(args.summary) if args.summary else Path(root) / "summary.json"
         try:
             export_mod.write_summary(summary, summary_path)
         except OSError as e:
-            print(f"Ошибка: не пишется файл {summary_path}: {e}", file=sys.stderr, flush=True)
+            _error(f"не пишется файл {summary_path}: {e}")
             return 1
         summary_note = f", сводка {summary_path}"
     else:
@@ -825,19 +925,16 @@ def _main_export(argv: list[str]) -> int:
 
 def _main_stats(argv: list[str]) -> int:
     """Сводная статистика корпуса в stdout: таблица или JSON, exit 0/1/2."""
+    _init_color(argv)
     args = build_stats_parser().parse_args(argv[1:])
     cfg = config_mod.load_config()
     root = storage_mod.resolve_root(args.in_dir, cfg)
     if not Path(root).is_dir():
-        print(f"Ошибка: папка корпуса не найдена: {root}.", file=sys.stderr, flush=True)
+        _error(f"папка корпуса не найдена: {root}.")
         return 2
     videos, skipped = export_mod.collect_corpus(root)
     if not videos:
-        print(
-            "Ошибка: в корпусе нет транскриптов (*/transcript.json).",
-            file=sys.stderr,
-            flush=True,
-        )
+        _error("в корпусе нет транскриптов (*/transcript.json).")
         return 1
     summary = export_mod.summarize(videos, skipped)
     if args.json:
@@ -872,6 +969,7 @@ def _fmt_size(num_bytes: int) -> str:
 
 def _main_library(argv: list[str]) -> int:
     """Список библиотеки: таблица или JSON, exit 0 (пустая — строка, тоже 0)."""
+    _init_color(argv)
     args = build_library_parser().parse_args(argv[1:])
     cfg = config_mod.load_config()
     root = storage_mod.resolve_root(None, cfg)
@@ -895,16 +993,15 @@ def _main_library(argv: list[str]) -> int:
 
 def _main_clean(argv: list[str]) -> int:
     """Удаление видео из библиотеки и/или кэша. Exit 0/1/2."""
+    _init_color(argv)
     args = build_clean_parser().parse_args(argv[1:])
     cfg = config_mod.load_config()
     root = storage_mod.resolve_root(None, cfg)
 
     if args.all and not args.yes:
-        print(
-            "Ошибка: --all удаляет ВСЮ библиотеку. "
-            "Подтвердите: kw-yt clean --all --yes.",
-            file=sys.stderr,
-            flush=True,
+        _error(
+            "--all удаляет ВСЮ библиотеку. "
+            "Подтвердите: kw-yt clean --all --yes."
         )
         return 2
 
@@ -915,11 +1012,9 @@ def _main_clean(argv: list[str]) -> int:
         except (TypeError, ValueError):
             days = -1
         if days < 0:
-            print(
-                f"Ошибка: --older-than должен быть целым числом дней >= 0, "
-                f"получено {args.older_than!r}.",
-                file=sys.stderr,
-                flush=True,
+            _error(
+                f"--older-than должен быть целым числом дней >= 0, "
+                f"получено {args.older_than!r}."
             )
             return 2
 
@@ -941,11 +1036,9 @@ def _main_clean(argv: list[str]) -> int:
             except OSError:
                 continue
     elif not args.cache:
-        print(
-            "Ошибка: укажите ID, --all --yes или --older-than DAYS "
-            "(см. kw-yt clean --help).",
-            file=sys.stderr,
-            flush=True,
+        _error(
+            "укажите ID, --all --yes или --older-than DAYS "
+            "(см. kw-yt clean --help)."
         )
         return 2
 

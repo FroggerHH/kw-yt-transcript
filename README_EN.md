@@ -142,6 +142,7 @@ All options:
 
 Defaults of `--out`, `--langs`, `--whisper-model`, `--jobs` and `--in` (in all commands)
 come from the config file when the flag is not given (see "Config and cache").
+Colors: auto (TTY), `NO_COLOR=1` or `--no-color` disable them.
 
 `kw-yt search QUERY`:
 

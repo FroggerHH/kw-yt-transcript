@@ -146,3 +146,9 @@ tests/           — stubs yt-dlp/transcript/whisper, без сети (M5: XDG t
 - `report.render_report(..., files=None)`: header как есть → «Текст» (абзацы,
   крупно) → Поиск → «По времени»/«Файлы» (details, относительные ссылки
   с download на фактические файлы) → главы; поиск подсвечивает обе секции.
+
+## v0.2 Волна 20 (цветной вывод, аддитивно)
+- Только stdlib ANSI в `cli.py`: `_supports_color` (TTY + нет --no-color/
+  NO_COLOR/TERM=dumb), `_ColorHelpFormatter` (usage/заголовки/опции;
+  на 3.14 гасит и stdlib-тему через `color=`/`_set_color`), красный
+  «Ошибка:», зелёный ok / красный FAIL в прогрессе, сводки — plain.
