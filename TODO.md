@@ -86,6 +86,10 @@
 - [x] `completion bash` из парсеров (+contrib реген, тесты source/complete); `--color auto/always/never` ×8 парсеров + тесты
 - [x] docs/demo/ (захваты help побайтовы) + quick start + Contributing (RU+EN); ruff format (16 файлов) + mypy 14→0; CI format/mypy-шаги
 - [x] Gates: pytest 246, ruff check+format чисто, mypy чисто, completion verified
+
+## Волна 24: src-layout [x] (done 18:09, 246 passed, fix-4)
+- [x] git mv 19 файлов (история сохранена); pyproject where=[src] + pytest pythonpath; CI/ARCH/README-dev обновлены
+- [x] Gates: pytest 246 в обоих режимах, ruff/mypy чисто, entry point ok; голый python -m без install — ожидаемо exit 1
 - [x] v0.1 → v0.2.0: 18 волн, 191 passed + 2 skipped, ruff чисто, всё запушено (FroggerHH/kw-yt-transcript, PUBLIC)
 - [x] Live-доказательства: fetch/batch/resume/export/stats/search/serve/Whisper-tiny(75)/thumbnails/gallery
 - [ ] Wiki-remote: not found весь день → user-step (создать первую страницу в web-wiki, контент в docs/wiki/)

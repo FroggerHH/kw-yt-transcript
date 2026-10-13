@@ -8,7 +8,7 @@
 
 ## Слои
 ```
-kw_yt_transcript/
+src/kw_yt_transcript/   (src-layout: пакет в src/, тесты находят его через pythonpath=["src"] в pyproject)
   cli.py         — argparse (RU), коды выхода 0/1/2, прогресс batch
   inputs.py      — входы → список задач: single URL/id | CSV/space/newline | --from-file | playlist URL
   metadata.py    — yt-dlp YoutubeDL.extract_info(download=False); sanitize_info; _type video vs playlist
@@ -184,7 +184,7 @@ tests/           — stubs yt-dlp/transcript/whisper, без сети (M5: XDG t
   `corpus/` (1 видео, помечено демо). Quick start в README цитирует захваты
   дословно (проверяет `test_readme_quotes_demo_outputs`).
 - **mypy:** чисто под
-  `uvx mypy@1.18.2 kw_yt_transcript --ignore-missing-imports --follow-imports=skip`
+  `uvx mypy@1.18.2 src --ignore-missing-imports --follow-imports=skip`
   (пин как у ruff). Правки точечные (≤5 строк на ошибку): `Any`-аннотации
   локалок в sections/report, `assert isinstance` после `type()`-гарда в export
   (bool по-прежнему отсекается `type()`), переименование `item→entry` в

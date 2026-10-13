@@ -38,10 +38,12 @@ asr = ["faster-whisper==1.2.1"]
 kw-yt = "kw_yt_transcript.cli:main"
 
 [tool.setuptools.packages.find]
+where = ["src"]
 include = ["kw_yt_transcript*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src"]
 
 [tool.ruff]
 line-length = 100

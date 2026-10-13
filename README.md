@@ -412,12 +412,12 @@ kw-yt serve /tmp/kw-live --port 8000            # http://127.0.0.1:8000, вых�
 ## Участие в разработке
 
 ```bash
-uv sync                                            # окружение по uv.lock
+uv sync                                            # окружение по uv.lock (+ editable-установка пакета из src/)
 uv run --locked --with pytest -- python -m pytest -q -p no:cacheprovider
-uvx ruff@0.14.5 check kw_yt_transcript tests        # линт (select E/F/W/I/UP в pyproject)
-uvx ruff@0.14.5 format --check kw_yt_transcript tests  # формат
-uvx mypy@1.18.2 kw_yt_transcript --ignore-missing-imports --follow-imports=skip
-python -m kw_yt_transcript --help
+uvx ruff@0.14.5 check src tests                     # линт (select E/F/W/I/UP в pyproject)
+uvx ruff@0.14.5 format --check src tests            # формат
+uvx mypy@1.18.2 src --ignore-missing-imports --follow-imports=skip
+uv run kw-yt --help                               # entry point (голый python -m из корня src/ не видит)
 ```
 
 Правила: тесты без сети (стабы в `tests/`; живой прогон YouTube — вручную,

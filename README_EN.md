@@ -350,12 +350,12 @@ kw-yt serve /tmp/kw-live --port 8000            # http://127.0.0.1:8000, exit wi
 Current version: 0.2.0 (`kw-yt --version`).
 
 ```bash
-uv sync                                            # environment from uv.lock
+uv sync                                            # environment from uv.lock (+ editable install of src/)
 uv run --locked --with pytest -- python -m pytest -q -p no:cacheprovider
-uvx ruff@0.14.5 check kw_yt_transcript tests        # lint (select E/F/W/I/UP in pyproject)
-uvx ruff@0.14.5 format --check kw_yt_transcript tests  # format
-uvx mypy@1.18.2 kw_yt_transcript --ignore-missing-imports --follow-imports=skip
-python -m kw_yt_transcript --help
+uvx ruff@0.14.5 check src tests                     # lint (select E/F/W/I/UP in pyproject)
+uvx ruff@0.14.5 format --check src tests            # format
+uvx mypy@1.18.2 src --ignore-missing-imports --follow-imports=skip
+uv run kw-yt --help                               # entry point (bare python -m can't see src/ from root)
 ```
 
 Rules: tests run without network (stubs in `tests/`; live YouTube runs are
