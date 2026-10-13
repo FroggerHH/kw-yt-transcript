@@ -25,7 +25,9 @@
 - [x] Волна 15 (fix-3, retry после rate limit): README_EN.md 1:1 + шапки-ссылки + тест EN. Gates: 189 passed, ruff clean.
 - [x] Волна 16 (fix-3): rich README (бейджи, TOC с якорями, highlights+demo, FAQ по коду). Gates: 190 passed, ruff clean.
 - [x] Review-финал (ora-3 → fix-3 + оркестратор): 8 пунктов без блокеров, classifier 3.14, lock чисто, LICENSE MIT. Gates: 191 passed, ruff clean. Commit b32f2d2 запушен.
-- [ ] Волна 17 (fixer): wiki-зеркало docs/wiki вровень с README (волны 12–16: CI/uv/AI/EN/badges). Затем done + отчёт.
+- [x] Волна 17 (fix-3): wiki-зеркало sync (6/7 страниц, волны 12–16). Gates: 191 passed. Commit 6730cc3 запушен.
+- [x] Волна 18 (fix-3): CHANGELOG-финал (волны 1–17 + ASR + reviews, счётчик 191). Gates: 191 passed.
+- [ ] Wiki-ретрай + done: коммит ниже, затем финальный отчёт.
 - Wiki-remote: not found 17:10 (>25 мин) → user-step (создать первую страницу в web-wiki).
 - [ ] Live batch (2 видео, --jobs 2, --resume повтор) + Whisper-tiny на реальном аудио. Затем done + отчёт.
 - [x] Done v0.2 (16:34 MSK, до дедлайна 17:31): коммит ниже, дерево чистое. Live-доказательства: single→9 файлов exit 0, report.html 33 ссылки, search 38–57 хитов, serve 200, export 61/487, stats таблица+JSON, thumbnail.jpg.

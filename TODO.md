@@ -54,9 +54,8 @@
 - [x] 6/7 страниц вровень с волнами 12–16 (CI/uv/AI/EN/badges); формат коротких страниц сохранён
 - [x] Gates: pytest 191, readme-smoke 9 passed; только docs/wiki/
 
-## Волна 18: CHANGELOG-финал [ ] (fixer; волны 8–17 + ASR + reviews в запись 0.2.0)
-
-## Волна 18: CHANGELOG-финал [ ] (fixer; волны 8–17 + ASR + reviews в запись 0.2.0)
+## Волна 18: CHANGELOG-финал [x] (done 17:13, 191 passed, fix-3)
+- [x] Запись 0.2.0: волны 1–17 + ASR + review-циклы, счётчик 191; grep «Волна» = 18 вхождений
 
 ## Волна 11: GitHub + wiki [~] (репозиторий PUBLIC + main запушен; wiki — blocked, контент сохранён)
 - [x] Аудит секретов чист (только упоминание пути); `gh repo edit --visibility public` → PUBLIC

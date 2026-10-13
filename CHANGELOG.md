@@ -13,7 +13,9 @@
 - **Волна 3a — hardening по review:** тихий отсутствующий конфиг, сильный
   resume-комплект, search за O(n log n), `as_completed`-прогресс, общий
   `timefmt.py`, whisper-семафор (2), версии Python 3.11+ везде.
-- Тестов 181 (было 100 в v0.1), ruff `E/F/W/I/UP` чисто.
+- **Волна 3b — релиз 0.2.0:** README v0.2, версия 0.2.0, CHANGELOG,
+  `test_readme` (консистентность README ↔ CLI).
+- Тестов 191 (было 100 в v0.1), ruff `E/F/W/I/UP` чисто.
 - **Волна 4 — экспорт форматов + completion:** `jsonl` (строки для RAG)
   и `csv` (таблица) в `--format`/`FORMATS`, `contrib/kw-yt-completion.bash`.
 - **Волна 5 — сводный экспорт:** `kw-yt export` (один `corpus.jsonl/csv` +
@@ -22,15 +24,34 @@
   реплики, слова, минуты, `by_origin`/`by_lang`) без скачивания.
 - **Волна 7 — обложки:** `thumbnail.jpg` best-effort в папке видео + `<img>`
   в `report.html` (`thumbnail_file` в meta.json).
+- **ASR av/VAD-fallback (live-находка):** faster-whisper 1.2.1 + PyAV ≥ 15
+  (`TypeError metadata_errors`) — обход через системный ffmpeg (wav 16 кГц
+  моно → ndarray float32, PyAV не задействуется); цепочка VAD (пусто
+  с фильтром → повтор без, live: 0 против 54); live-proof: Whisper-tiny →
+  origin whisper, 75 сегментов.
 - **Волна 8 — галерея в index.html:** миниатюры обложек (120px, lazy)
   в ячейке названия, `thumbnail_file` в entries (`index.json` совместим,
   is_file-защита от битого `<img>`).
 - **Волна 9 — аудит README против CLI:** все команды/флаги с корректными
   дефолтами, 10 файлов в live-check, обложки в «Что умеет», конфиг-фолбэк.
+- **Волна 10 — CHANGELOG 0.2.0:** запись покрыла волны 1–9 + review-циклы.
+- **Волна 11 — GitHub + wiki:** репозиторий PUBLIC, main запушен;
+  wiki-контент (7 страниц) зеркалится в `docs/wiki/` (web-wiki — user-step).
+- **Волна 12 — CI:** GitHub Actions (push/PR, matrix 3.11–3.14),
+  `uv sync --locked` + pytest + ruff-пин `0.14.5`, бейдж в README.
+- **Волна 13 — AI-warning:** плашка в README, ⚠-баннер в `report.html`
+  + строки в MD/TXT при origin auto/whisper; `jsonl`/`csv`/search — без примесей.
+- **Волна 14 — uv-миграция:** `uv.lock` (35 пакетов), `.python-version` 3.14,
+  CI на setup-uv, README uv-first (pip — альтернатива).
+- **Волна 15 — EN README:** `README_EN.md` 1:1 + языковые шапки-ссылки + тест.
+- **Волна 16 — rich README:** бейджи, оглавление с якорями, highlights + demo,
+  FAQ строго по коду.
+- **Волна 17 — wiki-зеркало:** sync 6/7 страниц `docs/wiki/` с волнами 12–16.
 - **Review-циклы без блокеров:** ora-2 (конфиг-тишина, resume, search O(n));
   ora-3 волн 4–5 (валидация сегментов → skipped, atomic, acceptance);
   финал волн 6–7 (span/минуты в `export.summarize`, 7 форматов в ARCH/SPEC,
-  acceptance п.15, `thumbnail_file` в README).
+  acceptance п.15, `thumbnail_file` в README); review-финал v0.2+
+  (8 пунктов, classifier 3.14, LICENSE MIT).
 
 ## 0.1.0 (2026-10-13)
 
