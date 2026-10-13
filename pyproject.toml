@@ -9,6 +9,23 @@ description = "Консольная утилита для получения м�
 readme = "SPEC.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
+keywords = ["youtube", "transcript", "subtitles", "transkriptsia", "cli"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Multimedia :: Video",
+  "Topic :: Utilities",
+]
 dependencies = [
   "yt-dlp>=2026.8.19",
   "youtube-transcript-api==1.2.4",

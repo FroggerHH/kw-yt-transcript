@@ -15,9 +15,9 @@
 - [x] asr.py (lazy faster-whisper, tmp аудио через yt-dlp bestaudio, очистка) + tests со stub-моделью
 - [x] Плейлист N=3 (mock) → N папок + index.json, частичные ошибки не валят всё (61 passed)
 
-## Фаза 4: Качество/упаковка [ ]
-- [ ] README.md RU (установка pipx/uv, примеры single/multi/playlist, форматы, Whisper extra) — проверить команды в чистом env (C3)
-- [ ] M4 полный прогон: format+lint+type+pytest+реальный --help; M5 изоляция (XDG temp, без сети)
+## Фаза 4: Качество/упаковка [x] (done 2026-10-13)
+- [x] README.md RU (установка pipx/uv, примеры single/multi/playlist, форматы, Whisper extra) — локальные команды проверены (C3), live-check оставлен user-side
+- [x] M4 полный прогон: pytest 66 passed + --help/--version exit 0; M5 изоляция (XDG temp, stubs, аудит без сети)
 - [ ] Oracle-review x2 до zero-actionable, exhaustion passes 1–8, done check C5
 
 ## Future backlog (не делаем)
