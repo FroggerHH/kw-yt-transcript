@@ -24,6 +24,7 @@ from kw_yt_transcript import config as config_mod
 from kw_yt_transcript import export as export_mod
 from kw_yt_transcript import search as search_mod
 from kw_yt_transcript import serve as serve_mod
+from kw_yt_transcript import storage as storage_mod
 from kw_yt_transcript.inputs import parse_inputs_with_errors
 from kw_yt_transcript.metadata import MetadataError
 from kw_yt_transcript.transcript import NoTranscriptError
@@ -71,6 +72,12 @@ EXAMPLES = """Примеры:
 
    kw-yt stats --in ./out
        Сводная статистика корпуса (таблица или --json).
+
+   kw-yt library
+       Список библиотеки (собственное хранилище, размеры, источники).
+
+   kw-yt clean dQw4w9WgXcQ --cache
+       Удалить видео из библиотеки + вычистить кэш метаданных.
 """
 
 
@@ -98,7 +105,7 @@ def build_parser() -> argparse.ArgumentParser:
         "-o",
         metavar="ПАПКА",
         default=None,
-        help="Папка для результатов (по умолчанию ./out или из конфига).",
+        help="Папка для результатов (по умолчанию библиотека или из конфига).",
     )
     p.add_argument(
         "--langs",
@@ -160,7 +167,7 @@ def build_search_parser() -> argparse.ArgumentParser:
         dest="in_dir",
         metavar="ПАПКА",
         default=None,
-        help="Корень корпуса (по умолчанию ./out или из конфига).",
+        help="Корень корпуса (по умолчанию библиотека или из конфига).",
     )
     p.add_argument(
         "--context",
@@ -186,7 +193,7 @@ def build_serve_parser() -> argparse.ArgumentParser:
         "directory",
         nargs="?",
         default=None,
-        help="Корень корпуса (по умолчанию ./out или из конфига).",
+        help="Корень корпуса (по умолчанию библиотека или из конфига).",
     )
     p.add_argument(
         "--port",
@@ -207,7 +214,7 @@ def build_export_parser() -> argparse.ArgumentParser:
         dest="in_dir",
         metavar="ПАПКА",
         default=None,
-        help="Корень корпуса (по умолчанию ./out или из конфига).",
+        help="Корень корпуса (по умолчанию библиотека или из конфига).",
     )
     p.add_argument(
         "--format",
@@ -245,12 +252,59 @@ def build_stats_parser() -> argparse.ArgumentParser:
         dest="in_dir",
         metavar="ПАПКА",
         default=None,
-        help="Корень корпуса (по умолчанию ./out или из конфига).",
+        help="Корень корпуса (по умолчанию библиотека или из конфига).",
     )
     p.add_argument(
         "--json",
         action="store_true",
         help="Вывести сводку JSON вместо таблицы.",
+    )
+    return p
+
+
+def build_library_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(
+        prog="kw-yt library",
+        description="Список библиотеки: видео с размерами и источниками.",
+    )
+    p.add_argument(
+        "--json",
+        action="store_true",
+        help="Вывести список JSON вместо таблицы.",
+    )
+    return p
+
+
+def build_clean_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(
+        prog="kw-yt clean",
+        description="Удалить видео из библиотеки и/или кэш метаданных.",
+    )
+    p.add_argument(
+        "ids",
+        nargs="*",
+        help="Video id для удаления (точное совпадение папки *_<id>).",
+    )
+    p.add_argument(
+        "--all",
+        action="store_true",
+        help="Удалить все видео библиотеки (требует также --yes).",
+    )
+    p.add_argument(
+        "--yes",
+        action="store_true",
+        help="Подтвердить удаление всех (--all без --yes — отказ).",
+    )
+    p.add_argument(
+        "--older-than",
+        metavar="DAYS",
+        default=None,
+        help="Удалить видео старше N дней (по времени папки).",
+    )
+    p.add_argument(
+        "--cache",
+        action="store_true",
+        help="Вычистить также XDG-кэш метаданных.",
     )
     return p
 
@@ -376,7 +430,8 @@ def _load_ready_record(video_dir: Path) -> dict[str, Any]:
 def main(argv: list[str] | None = None) -> int:
     """Точка входа. Коды: 0 — всё ок, 1 — частичные ошибки/не найдено, 2 — usage.
 
-    Субкоманды `search`/`serve`/`export`/`stats` — по argv[1], иначе старое fetch-поведение.
+    Субкоманды `search`/`serve`/`export`/`stats`/`library`/`clean` — по argv[1],
+    иначе fetch-поведение (скачивание в библиотеку по умолчанию).
     Fetch пишет в stderr, stdout пуст; search печатает результаты в stdout;
     serve печатает URL в stdout; export печатает сводку в stdout; stats — таблицу/JSON.
     """
@@ -389,6 +444,10 @@ def main(argv: list[str] | None = None) -> int:
         return _main_export(argv)
     if argv and argv[0] == "stats":
         return _main_stats(argv)
+    if argv and argv[0] == "library":
+        return _main_library(argv)
+    if argv and argv[0] == "clean":
+        return _main_clean(argv)
     return _main_fetch(argv)
 
 
@@ -450,17 +509,14 @@ def _main_fetch(argv: list[str]) -> int:
         return 2
     use_whisper = not args.no_fallback_whisper
 
-    out_raw = args.out if args.out is not None else cfg.get("out", "./out")
-    out_dir = Path(out_raw)
-    try:
-        out_dir.mkdir(parents=True, exist_ok=True)
-    except OSError as e:
-        print(f"Ошибка: не могу создать папку {out_raw!r}: {e}", file=sys.stderr, flush=True)
-        return 2
+    # Корень: флаг > конфиг > библиотека. Папку создаём только когда точно
+    # есть работа (ниже), чтобы ошибочные прогоны не трогали диск.
+    out_dir = storage_mod.resolve_root(args.out, cfg)
 
     if not jobs and not input_errors:
         # Пустой --from-file: только комменты/пустые строки — пустой index, exit 2.
         try:
+            out_dir.mkdir(parents=True, exist_ok=True)
             outputs.write_index(out_dir, [], None)
         except OSError as e:
             print(f"Ошибка: не могу записать index.json: {e}", file=sys.stderr, flush=True)
@@ -481,6 +537,12 @@ def _main_fetch(argv: list[str]) -> int:
         )
         print(f"вход: FAIL: {err}", file=sys.stderr)
     if not jobs:
+        return 2
+
+    try:
+        out_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as e:
+        print(f"Ошибка: не могу создать папку {out_dir!r}: {e}", file=sys.stderr, flush=True)
         return 2
 
     # План в порядке входов: ("video", (source, hint)) или ("done", result).
@@ -652,7 +714,7 @@ def _main_search(argv: list[str]) -> int:
     """Поиск по корпусу: группы «заголовок + mm:ss текст», exit 0/1."""
     args = build_search_parser().parse_args(argv[1:])
     cfg = config_mod.load_config()
-    root = args.in_dir or cfg.get("out", "./out")
+    root = storage_mod.resolve_root(args.in_dir, cfg)
     if not Path(root).is_dir():
         print(f"Ошибка: папка корпуса не найдена: {root}.", file=sys.stderr, flush=True)
         return 2
@@ -707,7 +769,7 @@ def _main_serve(argv: list[str]) -> int:
     """Просмотр корпуса через HTTP."""
     args = build_serve_parser().parse_args(argv[1:])
     cfg = config_mod.load_config()
-    root = args.directory or cfg.get("out", "./out")
+    root = storage_mod.resolve_root(args.directory, cfg)
     try:
         port = 8000 if args.port is None else int(str(args.port).strip())
     except (TypeError, ValueError):
@@ -731,7 +793,7 @@ def _main_export(argv: list[str]) -> int:
     """Сводный экспорт корпуса: один файл + summary.json, exit 0/1/2."""
     args = build_export_parser().parse_args(argv[1:])
     cfg = config_mod.load_config()
-    root = args.in_dir or cfg.get("out", "./out")
+    root = storage_mod.resolve_root(args.in_dir, cfg)
     if not Path(root).is_dir():
         print(f"Ошибка: папка корпуса не найдена: {root}.", file=sys.stderr, flush=True)
         return 2
@@ -765,7 +827,7 @@ def _main_stats(argv: list[str]) -> int:
     """Сводная статистика корпуса в stdout: таблица или JSON, exit 0/1/2."""
     args = build_stats_parser().parse_args(argv[1:])
     cfg = config_mod.load_config()
-    root = args.in_dir or cfg.get("out", "./out")
+    root = storage_mod.resolve_root(args.in_dir, cfg)
     if not Path(root).is_dir():
         print(f"Ошибка: папка корпуса не найдена: {root}.", file=sys.stderr, flush=True)
         return 2
@@ -793,6 +855,116 @@ def _main_stats(argv: list[str]) -> int:
         print(f"- {title} [{v.get('video_id') or '—'}]: "
               f"{v['segments']} реплик, {v['words']} слов, {v['seconds']} с.")
     return 0
+
+
+def _fmt_size(num_bytes: int) -> str:
+    """Байты -> КБ/МБ одной строкой (1024)."""
+    try:
+        n = int(num_bytes)
+    except Exception:
+        return "—"
+    if n < 0:
+        return "—"
+    if n < 1024 * 1024:
+        return f"{n / 1024:.1f} КБ"
+    return f"{n / (1024 * 1024):.1f} МБ"
+
+
+def _main_library(argv: list[str]) -> int:
+    """Список библиотеки: таблица или JSON, exit 0 (пустая — строка, тоже 0)."""
+    args = build_library_parser().parse_args(argv[1:])
+    cfg = config_mod.load_config()
+    root = storage_mod.resolve_root(None, cfg)
+    entries = storage_mod.iter_library(root)
+    if args.json:
+        print(json.dumps(entries, ensure_ascii=False, indent=2))
+        return 0
+    if not entries:
+        print(f"Библиотека пуста: {root}. Скачайте видео: kw-yt <URL> (без --out).")
+        return 0
+    print(f"Библиотека: {root} — видео {len(entries)}.")
+    for e in entries:
+        title = e.get("title") or e.get("video_id") or "—"
+        print(
+            f"- {title} [{e.get('video_id') or '—'}] "
+            f"{e.get('date') or '—'} {_fmt_size(e.get('size_bytes', 0))} "
+            f"{e.get('origin') or '—'}"
+        )
+    return 0
+
+
+def _main_clean(argv: list[str]) -> int:
+    """Удаление видео из библиотеки и/или кэша. Exit 0/1/2."""
+    args = build_clean_parser().parse_args(argv[1:])
+    cfg = config_mod.load_config()
+    root = storage_mod.resolve_root(None, cfg)
+
+    if args.all and not args.yes:
+        print(
+            "Ошибка: --all удаляет ВСЮ библиотеку. "
+            "Подтвердите: kw-yt clean --all --yes.",
+            file=sys.stderr,
+            flush=True,
+        )
+        return 2
+
+    days = None
+    if args.older_than is not None:
+        try:
+            days = int(str(args.older_than).strip())
+        except (TypeError, ValueError):
+            days = -1
+        if days < 0:
+            print(
+                f"Ошибка: --older-than должен быть целым числом дней >= 0, "
+                f"получено {args.older_than!r}.",
+                file=sys.stderr,
+                flush=True,
+            )
+            return 2
+
+    targets: list[Path] = []
+    missing: list[str] = []
+    if args.all:
+        targets = [root / e["dir"] for e in storage_mod.iter_library(root)]
+    elif args.ids:
+        targets, missing = storage_mod.find_video_dirs(root, list(args.ids))
+    elif days is not None:
+        import time
+
+        cutoff = time.time() - days * 86400
+        for e in storage_mod.iter_library(root):
+            d = root / e["dir"]
+            try:
+                if d.stat().st_mtime < cutoff:
+                    targets.append(d)
+            except OSError:
+                continue
+    elif not args.cache:
+        print(
+            "Ошибка: укажите ID, --all --yes или --older-than DAYS "
+            "(см. kw-yt clean --help).",
+            file=sys.stderr,
+            flush=True,
+        )
+        return 2
+
+    removed, freed = storage_mod.remove_dirs(targets)
+    cache_files = 0
+    if args.cache:
+        cache_files, cache_bytes = storage_mod.clear_cache()
+        freed += cache_bytes
+    for t in removed:
+        print(f"Удалено: {t.name}")
+    for m in missing:
+        print(f"Не найдено: {m}", file=sys.stderr)
+    note = f", кэш: файлов {cache_files}" if args.cache else ""
+    print(f"Итого: папок {len(removed)}, освобождено {_fmt_size(freed)}{note}.")
+    if removed or cache_files:
+        return 0
+    if args.cache and not missing and not targets:
+        return 0
+    return 1
 
 
 if __name__ == "__main__":

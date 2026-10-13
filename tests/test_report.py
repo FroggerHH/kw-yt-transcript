@@ -139,3 +139,40 @@ def test_report_ai_banner_origins():
         assert ("распознан ИИ" in html) == expect, origin
     html = render_report(_meta(), _segs(), compute_stats(_segs(), 372), None)
     assert "распознан ИИ" not in html
+
+
+def test_report_prose_before_timed():
+    html = render_report(_meta(), _segs(), compute_stats(_segs(), 372), "manual")
+    assert "<h2>Текст</h2>" in html
+    assert html.index("<h2>Текст</h2>") < html.index('class="seg"')
+    assert "Привет, это первый сегмент." in html
+
+
+def test_report_files_hub_links():
+    files = [
+        "meta.json", "report.html", "thumbnail.jpg", "transcript.srt",
+        "transcript.vtt", "transcript.json", "transcript.jsonl",
+        "transcript.csv", "transcript.txt", "transcript.md",
+    ]
+    html = render_report(_meta(), _segs(), compute_stats(_segs(), 372), "manual", files=files)
+    assert "<h2>Файлы</h2>" in html or "Файлы (" in html
+    for name in files:
+        assert f'href="{name}"' in html, name
+    assert "download" in html
+
+
+def test_report_file_url_fitness():
+    files = ["meta.json", "transcript.srt", "transcript.txt"]
+    html = render_report(_meta(), _segs(), compute_stats(_segs(), 372), "manual", files=files)
+    assert "/tmp" not in html and "/home" not in html
+    import re
+
+    for url in re.findall(r'https?://[^"\s<>]+', html):
+        assert url.startswith("https://www.youtube.com/") or url.startswith(
+            "https://youtu.be/"
+        ), url
+
+
+def test_report_search_covers_prose():
+    html = render_report(_meta(), _segs(), compute_stats(_segs(), 372), "manual")
+    assert ".prose-text" in html

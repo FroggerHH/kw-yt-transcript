@@ -281,14 +281,14 @@ def _write_config(home, body):
 
 def test_config_missing_gives_defaults_silent(capsys):
     cfg = config_mod.load_config()
-    assert cfg == {"langs": "ru,en", "out": "./out", "jobs": 4, "whisper_model": "small"}
+    assert cfg == {"langs": "ru,en", "out": None, "jobs": 4, "whisper_model": "small"}
     assert capsys.readouterr().err == ""
 
 
 def test_config_version_guard(monkeypatch, capsys):
     monkeypatch.setattr(sys, "version_info", (3, 10))
     cfg = config_mod.load_config()
-    assert cfg == {"langs": "ru,en", "out": "./out", "jobs": 4, "whisper_model": "small"}
+    assert cfg == {"langs": "ru,en", "out": None, "jobs": 4, "whisper_model": "small"}
     assert "3.11" in capsys.readouterr().err
 
 

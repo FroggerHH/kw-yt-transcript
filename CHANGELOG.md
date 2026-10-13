@@ -47,6 +47,10 @@
 - **Волна 16 — rich README:** бейджи, оглавление с якорями, highlights + demo,
   FAQ строго по коду.
 - **Волна 17 — wiki-зеркало:** sync 6/7 страниц `docs/wiki/` с волнами 12–16.
+- **Волна 19 — библиотека + report-хаб:** собственное хранилище
+  (`XDG_DATA_HOME/kw-yt/library`, дефолт всех команд; `out` убран из DEFAULTS),
+  `kw-yt library`/`clean` (размеры, точные id, `--all --yes`, `--older-than`,
+  `--cache`); `report.html` — хаб папки (Текст → По времени/Файлы → главы).
 - **Review-циклы без блокеров:** ora-2 (конфиг-тишина, resume, search O(n));
   ora-3 волн 4–5 (валидация сегментов → skipped, atomic, acceptance);
   финал волн 6–7 (span/минуты в `export.summarize`, 7 форматов в ARCH/SPEC,

@@ -72,6 +72,8 @@ def test_readme_required_sections():
         "kw-yt serve",
         "kw-yt export",
         "kw-yt stats",
+        "kw-yt library",
+        "kw-yt clean",
         "corpus.jsonl",
         "summary.json",
         "thumbnail.jpg",
@@ -110,6 +112,8 @@ def _all_option_strings():
         cli_mod.build_serve_parser(),
         cli_mod.build_export_parser(),
         cli_mod.build_stats_parser(),
+        cli_mod.build_library_parser(),
+        cli_mod.build_clean_parser(),
     )
     return {opt for p in parsers for action in p._actions for opt in action.option_strings}
 

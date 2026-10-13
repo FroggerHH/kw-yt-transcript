@@ -10,6 +10,7 @@ from __future__ import annotations
 import html
 from typing import Any
 
+from kw_yt_transcript.formats import paragraphs as _paragraphs
 from kw_yt_transcript.timefmt import mmss as _mmss
 
 _ORIGIN_LABELS = {"manual": "ручные субтитры", "auto": "автосубтитры", "whisper": "Whisper ASR"}
@@ -22,12 +23,15 @@ _CSS = (
     "th,td{border:1px solid #ccc;padding:6px 8px;text-align:left}"
     "mark{background:yellow}.seg{margin:6px 0}.ts{white-space:nowrap}"
     "#search{width:100%;padding:8px;font-size:1em;margin:12px 0}"
+    ".prose{font-size:1.15em;line-height:1.7}"
+    "details{margin:12px 0}summary{cursor:pointer;font-weight:bold}"
+    "ul.files{list-style:none;padding-left:0}"
 )
 
 _JS_SEARCH = """(function(){
 var input=document.getElementById("search");
 if(!input){return;}
-var blocks=Array.prototype.slice.call(document.querySelectorAll(".seg-text"));
+var blocks=Array.prototype.slice.call(document.querySelectorAll(".seg-text,.prose-text"));
 var originals=blocks.map(function(el){return el.textContent;});
 function esc(s){return s.replace(/[.*+?^${}()|[\\]\\\\]/g,"\\\\$&");}
 input.addEventListener("input",function(){
@@ -56,8 +60,17 @@ def render_report(
     segments: list[dict[str, Any]],
     stats: dict[str, Any] | None,
     origin: str | None,
+    files: list[str] | None = None,
 ) -> str:
-    """Один HTML-отчёт на видео."""
+    """Один HTML-отчёт на видео — хаб папки (Волна 19, SPEC п.18).
+
+    Порядок: header (обложка + мета + статистика + AI-баннер), затем сразу
+    human-readable «Текст», дальше детали «По времени» (?t=-ссылки) и «Файлы»
+    (относительные ссылки-скачивания на фактическое содержимое папки —
+    работает с file:// и под serve), главы.
+
+    :param files: имена файлов папки видео (факт, не хардкод); None — без секции.
+    """
     meta = dict(meta or {})
     stats = dict(stats or {})
     video_id = str(meta.get("video_id") or "")
@@ -133,11 +146,48 @@ def render_report(
         if ch_rows
         else ""
     )
-    transcript_html = (
-        "<section><h2>Транскрипт</h2>" + "".join(seg_rows) + "</section>"
-        if seg_rows
-        else "<section><h2>Транскрипт</h2><p>Транскрипт пуст.</p></section>"
+    try:
+        prose_paras = _paragraphs(
+            [
+                s for s in (segments or [])
+                if isinstance(s, dict)
+                and isinstance(s.get("text"), str)
+                and isinstance(s.get("start"), (int, float))
+                and isinstance(s.get("duration"), (int, float))
+            ]
+        )
+    except Exception:
+        prose_paras = []
+    prose_rows = "".join(
+        f'<p class="prose"><span class="prose-text">'
+        f"{html.escape(p, quote=False)}</span></p>"
+        for p in prose_paras
     )
+    prose_html = (
+        "<section><h2>Текст</h2>" + prose_rows + "</section>"
+        if prose_rows
+        else "<section><h2>Текст</h2><p>Транскрипт пуст.</p></section>"
+    )
+    timed_html = (
+        f"<details><summary>По времени ({len(seg_rows)})</summary>"
+        + "".join(seg_rows)
+        + "</details>"
+        if seg_rows
+        else "<section><h2>По времени</h2><p>Транскрипт пуст.</p></section>"
+    )
+    files_html = ""
+    if files:
+        file_rows = []
+        for name in files:
+            if not isinstance(name, str) or not name or "/" in name or name.startswith("."):
+                continue
+            esc = html.escape(name, quote=True)
+            file_rows.append(f'<li><a href="{esc}" download>{esc}</a></li>')
+        if file_rows:
+            files_html = (
+                f"<details><summary>Файлы ({len(file_rows)})</summary>"
+                '<ul class="files">' + "".join(file_rows) + "</ul></details>"
+            )
     watch = (
         f'<p><a href="https://www.youtube.com/watch?v='
         f'{html.escape(video_id, quote=True)}">Смотреть на YouTube</a></p>'
@@ -176,11 +226,13 @@ def render_report(
         f"<p>Слов: {words} | Символов: {chars} | "
         f"Время чтения: {reading_s} мин | Темп речи: {wpm_s} слов/мин</p>\n"
         f"<p>Ключевые слова: {top_s}</p></section>\n"
-        f"{chapters_html}\n"
+        f"{prose_html}\n"
         "<section><h2>Поиск</h2>\n"
         '<input type="search" id="search" placeholder="Поиск по транскрипту…">\n'
         '<p id="search-count"></p></section>\n'
-        f"{transcript_html}\n"
+        f"{timed_html}\n"
+        f"{files_html}\n"
+        f"{chapters_html}\n"
         f"<script>{_JS_SEARCH}</script>\n</body>\n</html>\n"
     )
 

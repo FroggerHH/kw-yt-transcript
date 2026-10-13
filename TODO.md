@@ -54,7 +54,30 @@
 - [x] 6/7 страниц вровень с волнами 12–16 (CI/uv/AI/EN/badges); формат коротких страниц сохранён
 - [x] Gates: pytest 191, readme-smoke 9 passed; только docs/wiki/
 
-## Итог сессии (17:14 MSK, ~2ч45м работы)
+## Волна 19: Хранилище + report-хаб [x] (done 17:39, 207 passed, fix-3)
+- [x] storage.py (library_path XDG, resolve флаг>конфиг>библиотека); config out убран из DEFAULTS
+- [x] cli library (таблица/JSON) + clean (ID/--all --yes/--older-than/--cache, --all без --yes → exit 2)
+- [x] report-хаб: Текст первым, По времени/Файлы (details, относительные download-ссылки на все файлы), поиск по обеим секциям
+- [x] Tests 16 новых (storage 11, report 4, batch 1) + test_speed дефолты; Gates: pytest 207, ruff clean, library exit 0 на XDG-tmp
+- [x] 30-минутное обязательство: волна в работе и доведена до зелёных gates + live-библиотека (17:39)
+- [ ] storage.py: library_path() (XDG_DATA_HOME/kw-yt/library, fallback ~/.local/share); out по умолчанию = библиотека (--out/конфиг перекрывают)
+- [ ] cli library (список: название/id/дата/размер, --json) + clean (--all | ID... | --older-than D, [--cache], подтверждение? нет — явные флаги достаточно)
+- [ ] report.html редизайн UX-first: сначала human-readable текст; вкладки Текст/По времени/Файлы (ссылки на ВСЕ артефакты, относительные, file:// ok); поиск по обоим видам
+- [ ] tests: дефолт-библиотека (XDG tmp), library/clean unit + CLI exit-коды, report-хаб (порядок: текст раньше таймкодов; ссылки на все файлы), README/ARCH/SPEC-консистентность
+- [ ] Gates: pytest зелёный (миграция дефолта --out не должна сломать старые тесты — обновить консистентно), ruff чисто, live: fetch без --out → библиотека, report открывается с текстом первым
+- [ ] Live-видео от пользователя (после волны 19): `https://www.youtube.com/watch?v=DbWL6Zs2j_g` — полный прогон + report-хаб + библиотека
+
+## Волна 20: Цветной вывод [ ] (queued, ПОСЛЕ волны 19 — правит cli.py/help)
+- [ ] Проблема: `uv tool install` даёт бесцветный --help (argparse без цветов везде). Решение stdlib-ANSI: подсветка help (usage/секции/опции) + прогресс/ok/fail; TTY-детект, NO_COLOR + --no-color, пайп — без цветов
+- [ ] tests: цвета на TTY-стабе, тишина на пайпе/NO_COLOR; README-строка; Gates: pytest зелёный
+
+## Волна 21: Фрагменты видео [ ] (queued, ПОСЛЕ волн 19–20 — трогает cli.py/formats/outputs)
+- [ ] `--from SEC --to SEC` (mm:ss/секунды) на fetch: обрезка сегментов по диапазону (границы клиппаются), meta-поле section, отдельная папка с суффиксом, пометка в report
+- [ ] tests: клиппинг unit + CLI exit-коды; README/ARCH/completion; Gates: pytest зелёный, ruff чисто
+
+## Волна 22: AI-agent skill [ ] (queued, ПОСЛЕ волн 20–21 — README правится многими)
+- [ ] SKILL.md (Agent Skills spec: name/description/frontmatter): когда использовать kw-yt (транскрипты для анализа, RAG-корпус, поиск), как (команды, exit-коды, форматы, без API-ключа, origin-маркировка), примеры
+- [ ] tests/test_skill.py (файл + frontmatter + ключевые команды); README-ссылка — отдельным коммитом оркестратора после всех волн; Gates: pytest зелёный
 - [x] v0.1 → v0.2.0: 18 волн, 191 passed + 2 skipped, ruff чисто, всё запушено (FroggerHH/kw-yt-transcript, PUBLIC)
 - [x] Live-доказательства: fetch/batch/resume/export/stats/search/serve/Whisper-tiny(75)/thumbnails/gallery
 - [ ] Wiki-remote: not found весь день → user-step (создать первую страницу в web-wiki, контент в docs/wiki/)

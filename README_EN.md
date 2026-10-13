@@ -21,6 +21,7 @@ Features:
 - text stats: words, reading time, speaking rate, keywords;
 - `kw-yt search` — search saved transcripts with context;
 - `kw-yt serve` — browse the corpus in a browser (built-in HTTP server);
+- `kw-yt library` / `kw-yt clean` — own storage: list with sizes, delete videos and cache;
 - fast batch: `--jobs N` in parallel, `--resume` skips finished items, metadata cache, config file.
 
 ## Requirements
@@ -112,6 +113,16 @@ kw-yt export --in ./out --format csv --out ./all.csv --no-summary
 # Summary corpus stats (table or JSON)
 kw-yt stats --in ./out
 kw-yt stats --in ./out --json
+
+# Default library (no --out — into own storage)
+kw-yt dQw4w9WgXcQ
+kw-yt library
+kw-yt library --json
+
+# Delete from the library
+kw-yt clean dQw4w9WgXcQ
+kw-yt clean --older-than 30 --cache
+kw-yt clean --all --yes
 ```
 
 All options:
@@ -120,7 +131,7 @@ All options:
 |---|---|---|
 | `inputs` | — | video id / video URL / playlist URL, several via `,;` space or newline |
 | `--from-file FILE` | — | file with an entry list |
-| `--out, -o DIR` | `./out` | results folder |
+| `--out, -o DIR` | `library` | results folder (own storage when unset) |
 | `--langs LANGS` | `ru,en` | subtitle languages, comma-separated, by priority |
 | `--format` | `all` | `srt`/`vtt`/`json`/`txt`/`md`/`jsonl`/`csv`/`all` (`jsonl` — RAG lines, `csv` — table) |
 | `--no-fallback-whisper` | off | don't run speech recognition when no subtitles exist |
@@ -136,13 +147,13 @@ come from the config file when the flag is not given (see "Config and cache").
 
 | Option | Default | What it does |
 |---|---|---|
-| `--in DIR` | `./out` | corpus root |
+| `--in DIR` | `library` | corpus root |
 | `--context SEC` | `15` | neighbouring lines within ±seconds (`>` — direct hit, space — context) |
 | `--limit N` | `20` | max videos in output |
 
 Output: groups per video with direct-hit counts, exit 0 (found) / 1 (not found).
 
-`kw-yt serve [DIR] [--port N]` (default `./out`, port `8000`, `0` — auto):
+`kw-yt serve [DIR] [--port N]` (default library, port `8000`, `0` — auto):
 serves the finished corpus (`index.html`/`report.html`) on `127.0.0.1`, exit with Ctrl+C.
 No `index.html` in the folder — warning, keeps serving (directory listing).
 
@@ -150,7 +161,7 @@ No `index.html` in the folder — warning, keeps serving (directory listing).
 
 | Option | Default | What it does |
 |---|---|---|
-| `--in DIR` | `./out` | corpus root |
+| `--in DIR` | `library` | corpus root |
 | `--format` | `jsonl` | `jsonl` (RAG lines) or `csv` (table) |
 | `--out FILE` | `<root>/corpus.{jsonl\|csv}` | where to write the corpus |
 | `--summary FILE` | `<root>/summary.json` | where to write the summary (counters, `by_origin`, skips) |
@@ -163,7 +174,7 @@ Output: summary line on stdout, exit 0; empty corpus — error, exit 1; missing 
 
 | Option | Default | What it does |
 |---|---|---|
-| `--in DIR` | `./out` | corpus root |
+| `--in DIR` | `library` | corpus root |
 | `--json` | off | JSON summary instead of a table (videos, lines, words, minutes, `by_origin`/`by_lang`) |
 
 Empty corpus — error, exit 1; missing folder — exit 2.
@@ -182,11 +193,14 @@ whisper_model = "small"
 
 Priority: CLI flags → config → built-in defaults. Missing file —
 defaults are used silently; broken file — Russian warning on stderr (work continues).
+Without `out` (flag and config) the root of all commands is the library (see "Library and cleanup").
 
 Metadata cache: `$XDG_CACHE_HOME/kw-yt` (or `~/.cache/kw-yt`), TTL 24 hours.
 Stale views/likes up to a day — by design. Cache errors silently fall back to network.
 
 ## Output structure
+
+Default root is the library (see above); layout inside the root:
 
 ```
 out/
@@ -228,6 +242,30 @@ Common cases:
 - no subtitles + `--no-fallback-whisper` → video in `index.json` with an error, exit 1;
 - no subtitles and no `asr` extra → helpful error `pip install kw-yt-transcript[asr]`, exit 1;
 - unreadable playlist → error entry in `index.json`, other inputs still processed.
+
+## Library and cleanup
+
+Without `--out` everything goes to own storage: `XDG_DATA_HOME/kw-yt/library`
+(or `~/.local/share/kw-yt/library`). Priority: `--out` flag → config `out` → library.
+
+`kw-yt library` — video list (title, id, date, size, origin):
+
+| Option | Default | What it does |
+|---|---|---|
+| `--json` | off | JSON list instead of a table |
+
+Empty library — Russian hint line, exit 0.
+
+`kw-yt clean` — delete from the library:
+
+| Option | Default | What it does |
+|---|---|---|
+| `ID [ID...]` | — | video id (exact `*_<id>` folder match) |
+| `--all --yes` | off | delete everything (`--all` without `--yes` is refused, exit 2) |
+| `--older-than DAYS` | — | delete videos older than N days |
+| `--cache` | off | also clear the XDG metadata cache |
+
+Report of what was deleted + bytes; nothing found — exit 1.
 
 ## Live video check (manually, needs internet)
 

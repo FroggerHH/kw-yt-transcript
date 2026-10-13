@@ -15,12 +15,16 @@ from pathlib import Path
 from typing import Any
 
 #: Значения по умолчанию (совпадают со старыми дефолтами CLI).
+#: Ключа `out` нет осознанно (Волна 19): None = библиотека
+#: (`storage.library_path()`), конфиг `out` перекрывает дефолт.
 DEFAULTS: dict[str, Any] = {
     "langs": "ru,en",
-    "out": "./out",
     "jobs": 4,
     "whisper_model": "small",
 }
+
+#: Полный дефолт для возврата (DEFAULTS + out=None = библиотека).
+_FULL_DEFAULTS: dict[str, Any] = {**DEFAULTS, "out": None}
 
 
 def config_path() -> Path:
@@ -37,9 +41,11 @@ def _coerce(section: dict[str, Any]) -> dict[str, Any]:
         langs = ",".join(str(x) for x in langs)
     if isinstance(langs, str) and langs.strip():
         cfg["langs"] = langs
-    out = section.get("out", DEFAULTS["out"])
+    out = section.get("out")
     if isinstance(out, str) and out.strip():
         cfg["out"] = out
+    else:
+        cfg["out"] = None  # нет в конфиге = библиотека (storage.library_path)
     jobs = section.get("jobs", DEFAULTS["jobs"])
     if isinstance(jobs, bool):
         pass
@@ -62,12 +68,12 @@ def load_config(path: str | Path | None = None) -> dict[str, Any]:
             file=sys.stderr,
             flush=True,
         )
-        return dict(DEFAULTS)
+        return dict(_FULL_DEFAULTS)
     cfg_path = Path(path) if path is not None else config_path()
     try:
         raw = cfg_path.read_bytes()
     except FileNotFoundError:
-        return dict(DEFAULTS)
+        return dict(_FULL_DEFAULTS)
     except OSError as e:
         print(
             f"Предупреждение: не могу прочитать конфиг {cfg_path}: {e}. "
@@ -75,7 +81,7 @@ def load_config(path: str | Path | None = None) -> dict[str, Any]:
             file=sys.stderr,
             flush=True,
         )
-        return dict(DEFAULTS)
+        return dict(_FULL_DEFAULTS)
     try:
         import tomllib
 
@@ -87,7 +93,7 @@ def load_config(path: str | Path | None = None) -> dict[str, Any]:
             file=sys.stderr,
             flush=True,
         )
-        return dict(DEFAULTS)
+        return dict(_FULL_DEFAULTS)
     section: dict[str, Any] = {}
     if isinstance(data, dict):
         tool = data.get("tool")
@@ -96,7 +102,7 @@ def load_config(path: str | Path | None = None) -> dict[str, Any]:
         elif isinstance(data.get("defaults"), dict):
             section = data["defaults"]
         else:
-            section = {k: v for k, v in data.items() if k in DEFAULTS}
+            section = {k: v for k, v in data.items() if k in DEFAULTS or k == "out"}
     if not isinstance(section, dict):
         section = {}
     return _coerce(section)

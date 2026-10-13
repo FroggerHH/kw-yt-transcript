@@ -134,3 +134,15 @@ tests/           — stubs yt-dlp/transcript/whisper, без сети (M5: XDG t
   не менялся (обложка опциональна).
 - `report.render_report`: `<img src="thumbnail.jpg">` при наличии файла.
 - **Limitation (info):** скачивание обложки — timeout 20 с/видео в воркере пула batch (остальные видео не блокируются); флага `--no-thumb` нет — обложка всегда best-effort.
+
+## v0.2 Волна 19 (библиотека + report-хаб, аддитивно)
+- `storage.py`: `library_path()` (`XDG_DATA_HOME/kw-yt/library`, fallback
+  `~/.local/share`), `resolve_root` (флаг > конфиг > библиотека),
+  `iter_library`/`find_video_dirs` (точное `_<id>`) / `remove_dirs`/`clear_cache`.
+  `config.DEFAULTS` без `out` (None = библиотека); mkdir в fetch отложен
+  до реальной работы (ошибочные прогоны диск не трогают).
+- CLI `library` (таблица/JSON, пустая → exit 0) и `clean`
+  (ID/`--all --yes`/`--older-than`/`--cache`; `--all` без `--yes` → exit 2).
+- `report.render_report(..., files=None)`: header как есть → «Текст» (абзацы,
+  крупно) → Поиск → «По времени»/«Файлы» (details, относительные ссылки
+  с download на фактические файлы) → главы; поиск подсвечивает обе секции.

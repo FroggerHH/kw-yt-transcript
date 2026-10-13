@@ -27,7 +27,8 @@
 - [x] Review-финал (ora-3 → fix-3 + оркестратор): 8 пунктов без блокеров, classifier 3.14, lock чисто, LICENSE MIT. Gates: 191 passed, ruff clean. Commit b32f2d2 запушен.
 - [x] Волна 17 (fix-3): wiki-зеркало sync (6/7 страниц, волны 12–16). Gates: 191 passed. Commit 6730cc3 запушен.
 - [x] Волна 18 (fix-3): CHANGELOG-финал (волны 1–17 + ASR + reviews, счётчик 191). Gates: 191 passed.
-- [ ] Wiki-ретрай + done: коммит ниже, затем финальный отчёт.
+- [x] Волна 19 (fix-3): библиотека-дефолт + library/clean + report-хаб (текст первым). Gates: 207 passed, ruff clean, live library exit 0.
+- [ ] Волна 20 (fixer): цветной вывод (TTY/NO_COLOR/--no-color). Затем 21 (фрагменты), 22 (skill), live на видео пользователя, wiki, done.
 - Wiki-remote: not found 17:10 (>25 мин) → user-step (создать первую страницу в web-wiki).
 - [ ] Live batch (2 видео, --jobs 2, --resume повтор) + Whisper-tiny на реальном аудио. Затем done + отчёт.
 - [x] Done v0.2 (16:34 MSK, до дедлайна 17:31): коммит ниже, дерево чистое. Live-доказательства: single→9 файлов exit 0, report.html 33 ссылки, search 38–57 хитов, serve 200, export 61/487, stats таблица+JSON, thumbnail.jpg.

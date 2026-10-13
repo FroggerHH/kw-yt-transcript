@@ -239,7 +239,15 @@ def write_video(
         paths[name] = str(file_path)
     try:
         report_meta = dict(record)
-        report_html = render_report(report_meta, segments, record["stats"], origin)
+        try:
+            present = sorted(
+                p.name for p in video_dir.iterdir() if p.is_file() and not p.name.endswith(".tmp")
+            )
+        except OSError:
+            present = []
+        if "report.html" not in present:
+            present.append("report.html")
+        report_html = render_report(report_meta, segments, record["stats"], origin, files=present)
     except Exception:
         report_html = (
             "<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<meta charset=\"utf-8\">\n"

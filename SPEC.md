@@ -32,6 +32,8 @@
 12. **Экспортные форматы:** `jsonl` (строки `{video_id,title,start,duration,text}` для RAG) и `csv` (таблица) в `--format`/`FORMATS` + `contrib/kw-yt-completion.bash`.
 13. **Сводный экспорт:** `kw-yt export` — склейка `*/transcript.json` в один `corpus.jsonl/csv` + `summary.json` (счётчики, `by_origin`, `skipped`); пустой корпус → exit 1.
 14. **Сводная статистика:** `kw-yt stats` — таблица/JSON по корпусу (видео, реплики, слова, минуты, `by_origin`/`by_lang`) без скачивания; пустой корпус → exit 1.
+17. **Собственное хранилище:** дефолтная папка — библиотека утилиты (`XDG_DATA_HOME/kw-yt/library`, fallback `~/.local/share/kw-yt/library`), а не `./out`; `--out`/конфиг перекрывают. Управление: `kw-yt library` (список с размерами), `kw-yt clean` (удаление видео/кэша).
+18. **report.html как хаб:** доступны ВСЕ артефакты видео (скачивание/просмотр каждого формата + meta + обложка, относительные ссылки, работает с file://); первым показан human-readable текст, таймкод-вид — второй вкладкой.
 15. **Acceptance v0.2:** live single → report.html открывается и содержит таймкоды; search находит слово из живого транскрипта; serve отдаёт 200 на index; повторный прогон с --resume не зовёт сеть (тест); конфиг читается; export склеивает корпус в corpus.jsonl + summary.json (тест + live); stats показывает минуты, обложки best-effort (`thumbnail.jpg`/`thumbnail_file: null`); весь набор тестов зелёный.
 ## Acceptance criteria (v0.1)
 - `kw-yt --help` работает, `--version` показывает версию.

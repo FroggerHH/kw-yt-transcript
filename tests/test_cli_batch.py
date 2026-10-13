@@ -352,3 +352,16 @@ def test_index_report_fields(monkeypatch, tmp_path):
     assert record["transcript_lang"] == "ru"
     assert record["tool_version"]
     assert record["fetched_at"]
+
+
+def test_fetch_defaults_to_library_under_xdg(monkeypatch, tmp_path):
+    from kw_yt_transcript import storage as storage_mod
+
+    data = tmp_path / "xdg-data"
+    monkeypatch.setenv("XDG_DATA_HOME", str(data))
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "xdg-config"))
+    patch_all(monkeypatch)
+    assert cli_mod.main([VIDS[0]]) == 0
+    lib = data / "kw-yt" / "library"
+    got = storage_mod.iter_library(lib)
+    assert [e["video_id"] for e in got] == [VIDS[0]]
