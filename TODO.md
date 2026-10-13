@@ -58,15 +58,24 @@
 - [x] /tmp/kw-final: pip install . → 0.2.0, 5×--help exit 0, pip check чисто
 - [x] Live: fetch exit 0 (10 файлов), export 61/487, stats таблица, search 38, serve 200
 
-## Волна 12: GitHub Actions CI [ ] (queued, после ASR-fallback)
-- [ ] .github/workflows/ci.yml: matrix Python 3.11–3.13, pip install -e . + pytest, ruff E/F/W/I/UP; запуск на push/PR
-- [ ] README-бейдж CI; Gates: green на первом пуше
+## Волна 12: GitHub Actions CI [x] (done 16:56, 188 passed, fix-3)
+- [x] .github/workflows/ci.yml (push/PR, matrix 3.11–3.13, pip install + pytest + ruff, YAML валиден)
+- [x] README-бейдж CI (строка вне теста флагов — проверено)
+
+## Волна 13: AI-generated warning [x] (done 16:56, 188 passed, fix-3)
+- [x] README-плашка (проект + auto/whisper); report.html жёлтый баннер (auto/whisper only); md/txt строки
+- [x] Тесты ×3 origin + маркер «распознан ИИ»
 
 ## Волна 13: AI-generated warning [ ] (queued, после ASR-fallback)
 - [ ] README: плашка «проект разработан при участии ИИ; субтитры auto/whisper распознаны ИИ — возможны ошибки»
 - [ ] report.html: баннер «⚠ текст распознан ИИ, возможны ошибки» при origin auto/whisper (manual — без баннера)
 - [ ] transcript.md/txt: строка-предупреждение в шапку при auto/whisper; meta.json уже имеет origin
 - [ ] Тесты баннера ×3 origin + test_readme-маркер; Gates: pytest зелёный
+
+## Волна 14: Миграция на uv [ ] (queued, ПОСЛЕ волны 12 — правит её workflow)
+- [ ] Факт: проект на pip (pyproject без [tool.uv], нет uv.lock) → мигрировать по условию пользователя
+- [ ] `uv lock` в репо + проверка `uv sync --locked`; README: установка/запуск через uv (sync/run/tool); CI wave-12 перевести на astral-sh/setup-uv
+- [ ] Gates: `uv sync --locked` чисто с нуля, pytest через `uv run --no-project` зелёный (или `uv run --locked`)
 
 ## Волна 4: Экспорт + completion [x] (done 16:18, 163 passed, оркестратор напрямую)
 - [x] formats jsonl/csv (+реестр FORMATS, filenames, --format choices), тесты round-trip/quoting/empty/header

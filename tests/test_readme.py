@@ -70,6 +70,7 @@ def test_readme_required_sections():
         "summary.json",
         "thumbnail.jpg",
         "10 файлов",
+        "распознан ИИ",
         "report.html",
         "index.html",
         "config.toml",

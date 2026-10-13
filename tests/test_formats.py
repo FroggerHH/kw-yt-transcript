@@ -147,3 +147,19 @@ def test_paragraphs_edge_cases():
         {"text": "б", "start": 0.0, "duration": 1.0},
     ]
     assert paragraphs(zero) == ["а б"]
+
+
+def test_ai_warning_md_txt_origins():
+    for origin, expect in (("manual", False), ("auto", True), ("whisper", True)):
+        m = dict(INFO)
+        m["origin"] = origin
+        assert ("распознан ИИ" in to_md(SEGMENTS, m)) == expect, origin
+        assert ("распознан ИИ" in to_txt(SEGMENTS, m)) == expect, origin
+    assert "распознан ИИ" not in to_md(SEGMENTS)
+    assert "распознан ИИ" not in to_txt(SEGMENTS)
+    assert "распознан ИИ" not in to_md(SEGMENTS, meta_with_origin())
+    m = dict(INFO)
+    m["origin"] = "auto"
+    assert to_txt(SEGMENTS, m).startswith("⚠")
+    lines = to_md(SEGMENTS, m).splitlines()
+    assert lines[0].startswith("#") and "распознан ИИ" in lines[2]

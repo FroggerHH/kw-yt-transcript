@@ -23,6 +23,22 @@ PARAGRAPH_MAX_LEN = 800
 
 _ORIGIN_LABELS = {"manual": "ручные субтитры", "auto": "автосубтитры", "whisper": "Whisper ASR"}
 
+#: Источники машинного слуха — к их текстам добавляется AI-предупреждение.
+_AI_ORIGINS = ("auto", "whisper")
+
+#: Предупреждение о машинном распознавании (report/MD/TXT).
+_AI_WARNING = (
+    "⚠ Текст распознан ИИ (автосубтитры/Whisper), "
+    "возможны ошибки — сверьте важное с аудио."
+)
+
+
+def _ai_warning_line(meta: dict[str, Any] | None) -> str:
+    """Строка AI-предупреждения, если origin машинный; иначе ``""``."""
+    if isinstance(meta, dict) and meta.get("origin") in _AI_ORIGINS:
+        return _AI_WARNING
+    return ""
+
 
 def _ms_total(seconds: float) -> int:
     return max(0, int(round(seconds * 1000)))
@@ -98,9 +114,15 @@ def to_json(segments: list[dict[str, Any]], meta: dict[str, Any] | None = None) 
 
 
 def to_txt(segments: list[dict[str, Any]], meta: dict[str, Any] | None = None) -> str:
-    """Читаемый текст: абзацы через пустую строку. Пусто → ``""``."""
-    del meta
-    return "\n\n".join(paragraphs(segments))
+    """Читаемый текст: абзацы через пустую строку. Пусто → ``""``.
+
+    При машинном origin (auto/whisper) первая строка — AI-предупреждение.
+    """
+    body = "\n\n".join(paragraphs(segments))
+    warn = _ai_warning_line(meta)
+    if warn and body:
+        return warn + "\n\n" + body
+    return body
 
 
 def to_jsonl(segments: list[dict[str, Any]], meta: dict[str, Any] | None = None) -> str:
@@ -166,6 +188,11 @@ def to_md(segments: list[dict[str, Any]], meta: dict[str, Any] | None = None) ->
     lines = [
         f"# {meta.get('title') or 'Транскрипт'}",
         "",
+    ]
+    warn = _ai_warning_line(meta)
+    if warn:
+        lines += [warn, ""]
+    lines += [
         f"- Автор: {meta.get('channel') or meta.get('author') or '—'}",
         f"- Дата: {meta.get('upload_date') or '—'}",
         f"- Длительность: {_mmss(meta.get('duration'))}"

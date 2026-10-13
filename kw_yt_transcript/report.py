@@ -152,6 +152,15 @@ def render_report(
             'style="max-width:100%;border-radius:8px">\n'
         )
 
+    ai_banner = ""
+    if origin in ("auto", "whisper"):
+        ai_banner = (
+            '<p style="background:#fff3cd;border:1px solid #e6c200;'
+            'padding:8px;border-radius:8px">'
+            "⚠ Текст распознан ИИ, возможны ошибки. "
+            "Сверьте важное с аудио.</p>\n"
+        )
+
     return (
         "<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<meta charset=\"utf-8\">\n"
         f"<title>{html.escape(title, quote=True)}</title>\n"
@@ -162,6 +171,7 @@ def render_report(
         f"Длительность: {_mmss(duration)} | "
         f"Источник: {html.escape(_origin_label(origin), quote=False)} | "
         f"Язык: {html.escape(str(lang), quote=False)}</p>\n{watch}</header>\n"
+        f"{ai_banner}"
         f"<section class=\"stats\"><h2>Статистика</h2>\n"
         f"<p>Слов: {words} | Символов: {chars} | "
         f"Время чтения: {reading_s} мин | Темп речи: {wpm_s} слов/мин</p>\n"

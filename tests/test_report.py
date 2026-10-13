@@ -131,3 +131,11 @@ def test_index_without_thumbnails_no_img():
     assert "<img" not in html
     assert "<table>" in html
     assert "Видео &lt;один&gt;" in html
+
+
+def test_report_ai_banner_origins():
+    for origin, expect in (("manual", False), ("auto", True), ("whisper", True)):
+        html = render_report(_meta(), _segs(), compute_stats(_segs(), 372), origin)
+        assert ("распознан ИИ" in html) == expect, origin
+    html = render_report(_meta(), _segs(), compute_stats(_segs(), 372), None)
+    assert "распознан ИИ" not in html

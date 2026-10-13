@@ -1,5 +1,9 @@
 # kw-yt-transcript
 
+[![CI](https://github.com/FroggerHH/kw-yt-transcript/actions/workflows/ci.yml/badge.svg)](https://github.com/FroggerHH/kw-yt-transcript/actions)
+
+> Проект разработан при участии ИИ. Текст с origin auto/whisper распознан ИИ (машинный слух) — возможны ошибки, сверяйте важные места с аудио.
+
 Консольная утилита для скачивания метаданных и полных транскриптов видео YouTube.
 Русскоязычный CLI, пакетная обработка, работает **без API-ключа**.
 
