@@ -10,10 +10,10 @@
 - [x] transcript.py + formats.py (fetch ru→en fallback, SRT/VTT/JSON/TXT/MD с абзацами) + tests
 - [x] E2E на фикстуре: 38 passed, SRT таймкоды валидны
 
-## Фаза 3: Batch + Whisper-fallback [ ]
-- [ ] outputs.py (папка на видео, index.json, errors.log, exit codes 0/1/2, прогресс)
-- [ ] asr.py (lazy faster-whisper, tmp аудио через yt-dlp bestaudio, очистка) + tests со stub-моделью
-- [ ] Плейлист N=3 (mock) → N папок + index.json, частичные ошибки не валят всё
+## Фаза 3: Batch + Whisper-fallback [x] (done 2026-10-13)
+- [x] outputs.py (папка на видео, index.json, errors.log, exit codes 0/1/2, прогресс)
+- [x] asr.py (lazy faster-whisper, tmp аудио через yt-dlp bestaudio, очистка) + tests со stub-моделью
+- [x] Плейлист N=3 (mock) → N папок + index.json, частичные ошибки не валят всё (61 passed)
 
 ## Фаза 4: Качество/упаковка [ ]
 - [ ] README.md RU (установка pipx/uv, примеры single/multi/playlist, форматы, Whisper extra) — проверить команды в чистом env (C3)

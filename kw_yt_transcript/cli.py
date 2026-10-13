@@ -1,15 +1,22 @@
-"""CLI kw-yt: разбор аргументов и печать задач (Фаза 1).
+"""CLI kw-yt: разбор аргументов и пакетная загрузка (Фаза 3).
 
-Реальная загрузка метаданных/транскриптов — Фазы 2–3.
-Только стандартная библиотека: --help работает без сети и без опциональных зависимостей.
+Полный цикл: parse_inputs → get_metadata → get_transcript
+(или Whisper-fallback) → write_video + index.json.
+Импорты только stdlib + свои модули: --help работает без сети
+и без опциональных зависимостей (yt-dlp/transcript/whisper — лениво).
 """
 
 from __future__ import annotations
 
 import argparse
+import sys
+from pathlib import Path
+from typing import Any
 
-from kw_yt_transcript import __version__
+from kw_yt_transcript import __version__, asr, metadata, outputs, transcript
 from kw_yt_transcript.inputs import parse_inputs
+from kw_yt_transcript.metadata import MetadataError
+from kw_yt_transcript.transcript import NoTranscriptError
 
 EXAMPLES = """Примеры:
   kw-yt dQw4w9WgXcQ
@@ -87,8 +94,68 @@ def build_parser() -> argparse.ArgumentParser:
     return p
 
 
+def expand_playlist(url: str, ydl_factory=None) -> list[str]:
+    """Flat-развёртка плейлиста в список URL видео (ленивый yt-dlp).
+
+    :param ydl_factory: инъекция для тестов (как в metadata.get_metadata).
+    """
+    if ydl_factory is None:
+        import yt_dlp
+
+        ydl_factory = yt_dlp.YoutubeDL
+    try:
+        with ydl_factory({"quiet": True, "skip_download": True, "extract_flat": True}) as ydl:
+            info = ydl.extract_info(url, download=False)
+    except Exception as e:
+        raise MetadataError(f"Не удалось прочитать плейлист {url!r}: {e}") from e
+    entries = (info or {}).get("entries") or []
+    out = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        entry_url = entry.get("url") or ""
+        if "://" in entry_url:
+            out.append(entry_url)
+        elif entry.get("id"):
+            out.append(f"https://www.youtube.com/watch?v={entry['id']}")
+    return out
+
+
+def _process_video(
+    source: str,
+    hint_id: str | None,
+    langs: list[str],
+    use_whisper: bool,
+    whisper_model: str,
+    out_dir: Path,
+    formats_sel: str,
+) -> dict[str, Any]:
+    """Одно видео: метаданные → субтитры (или Whisper) → файлы.
+
+    Не бросает исключений: неуспех возвращается как result с ``error``.
+    """
+    meta: dict[str, Any] | None = None
+    try:
+        meta = metadata.get_metadata(source)
+        video_id = meta.get("video_id") or hint_id
+        if not video_id:
+            raise MetadataError(f"yt-dlp не вернул video id для {source!r}.")
+        try:
+            segments, origin = transcript.get_transcript(video_id, languages=langs)
+        except NoTranscriptError:
+            if not use_whisper:
+                raise
+            segments, origin = asr.transcribe_whisper(
+                meta.get("url") or source, model_name=whisper_model
+            )
+        paths = outputs.write_video(out_dir, meta, segments, origin, formats_sel)
+        return {"meta": meta, "dir": Path(paths["dir"]).name, "origin": origin, "error": None}
+    except Exception as e:
+        return {"meta": meta, "dir": None, "origin": None, "error": str(e)}
+
+
 def main(argv: list[str] | None = None) -> int:
-    """Точка входа. Возвращает код выхода: 0 — ок, 1 — частичные ошибки, 2 — ошибка."""
+    """Точка входа. Коды: 0 — всё ок, 1 — частичные ошибки, 2 — usage/фатальное."""
     args = build_parser().parse_args(argv)
 
     try:
@@ -106,14 +173,66 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 2
 
-    print(f"Задач: {len(jobs)}. Папка вывода: {args.out}. Языки: {args.langs}. Формат: {args.format}.")
-    for i, job in enumerate(jobs, 1):
-        detail = job.get("video_id") or job.get("url", "")
-        print(f"  [{i}/{len(jobs)}] {job['kind']}: {detail}")
+    out_dir = Path(args.out)
+    try:
+        out_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as e:
+        print(f"Ошибка: не могу создать папку {args.out!r}: {e}", flush=True)
+        return 2
 
-    # Фаза 1: только разбор и печать задач, загрузка — Фазы 2–3.
-    print("Загрузка метаданных и транскриптов: not implemented (будет в Фаза 2–3).")
-    return 2
+    langs = [lang.strip() for lang in args.langs.split(",") if lang.strip()] or ["ru", "en"]
+    use_whisper = not args.no_fallback_whisper
+
+    # Плейлисты разворачиваем в видео; неуспешный expand — ошибка-запись, batch идёт дальше.
+    video_tasks: list[tuple[str, str | None]] = []
+    playlist_url: str | None = None
+    results: list[dict[str, Any]] = []
+    for job in jobs:
+        if job["kind"] == "playlist":
+            url = job.get("url") or job.get("raw", "")
+            if playlist_url is None:
+                playlist_url = url
+            try:
+                entries = expand_playlist(url)
+            except Exception as e:
+                results.append({"meta": None, "dir": None, "origin": None, "error": str(e)})
+                print(f"плейлист {url}: FAIL: {e}", file=sys.stderr)
+                continue
+            for entry_url in entries:
+                video_tasks.append((entry_url, None))
+        else:
+            video_tasks.append(
+                (job.get("url") or job.get("video_id") or job.get("raw", ""), job.get("video_id"))
+            )
+
+    if not video_tasks and not results:
+        print("Ошибка: по заданным входам видео не найдено.", flush=True)
+        return 2
+
+    total = len(video_tasks)
+    for i, (source, hint_id) in enumerate(video_tasks, 1):
+        label = hint_id or source
+        result = _process_video(
+            source, hint_id, langs, use_whisper, args.whisper_model, out_dir, args.format
+        )
+        results.append(result)
+        if result["error"]:
+            print(f"[{i}/{total}] {label} ... FAIL: {result['error']}", file=sys.stderr)
+        else:
+            print(
+                f"[{i}/{total}] {result['meta'].get('video_id')} ... ok", file=sys.stderr
+            )
+
+    try:
+        index_path = outputs.write_index(out_dir, results, playlist_url)
+    except OSError as e:
+        print(f"Ошибка: не могу записать index.json: {e}", flush=True)
+        return 2
+
+    failed = sum(1 for r in results if r["error"])
+    ok = len(results) - failed
+    print(f"Готово: {ok}/{len(results)}, ошибок: {failed}. Папка: {out_dir}.")
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":

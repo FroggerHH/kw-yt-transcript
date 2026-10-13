@@ -21,7 +21,8 @@
 ## Phase 3: Implementation (in progress)
 - [x] Фаза 1 (fix-1, 9ae4d9b): скелет + CLI + inputs.py + 14 tests. Gates: --help RU exit 0, --version 0.1.0, pytest 14 passed.
 - [x] Фаза 2 (fix-1): metadata.py + transcript.py + formats.py + 24 tests. Gates: 38 passed, --help exit 0, SRT/VTT regex валидны.
-- [ ] Фаза 3 (fix-3, background): outputs.py + asr.py + cli wiring batch. Acceptance: pytest зелёный, mock-плейлист N=3 → 3 папки + index.json, exit codes 0/1/2.
+- [x] Фаза 3 (fix-1): outputs.py + asr.py + cli wiring batch + 23 tests. Gates: 61 passed, --help exit 0, slug-транслит ок.
+- [ ] Фаза 4 (fix-4, background): README RU + упаковка + M4/M5 полный прогон + Oracle-review x2. Acceptance: README-команды в чистом env, pytest зелёный, два Oracle-раунда без actionable.
 - Next: Фаза 3 batch+ASR, Фаза 4 README/верификация/Oracle-review.
 
 ## Next

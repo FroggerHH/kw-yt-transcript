@@ -20,3 +20,8 @@
 - **Claim:** Один парсер покрывает single/multi/file/playlist.
 - **Checked:** yt-dlp `_type` video vs playlist/multi_video, `extract_flat` True/False; inputs: URL/id regex, split по `[,;\s\n]+`, `--from-file`, playlist expand.
 - **Outcome:** accepted.
+
+## D5: Работа без YouTube Data API-ключа (accepted 2026-10-13)
+- **Claim:** Утилита не требует API-ключа; файл `~/Рабочий стол/yt-api-key.txt` не читаем и не используем.
+- **Checked:** Архитектура (yt-dlp + youtube-transcript-api + faster-whisper) ключа не требует; пользователь явно предпочёл работу без ключа, файл упомянут лишь как запасной.
+- **Outcome:** accepted — ключ остаётся опциональным fallback на будущее (SPEC non-goals: Data API v3 опционально позже); секрет-файл нетронут.
