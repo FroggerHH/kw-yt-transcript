@@ -34,7 +34,9 @@ Floor: 3h (интервью v0.1) + продолжение по идеям/по�
 - [x] Волна 20 (fix-3): цветной вывод (TTY/NO_COLOR/--no-color, пайп чистый). Gates: 215 passed, ruff clean.
 - [x] Волна 21 (fix-3): фрагменты --from/--to (clip, суффикс, раздельный resume, пометка report). Gates: 224 passed, ruff clean.
 - [x] Волна 24 (fix-4): src-layout (git mv 19 файлов, конфиг, доки). Gates: 246 passed ×2 режима, ruff/mypy чисто. Commit 178d71d запушен.
-- [ ] Wiki-ретрай + done: затем финальный отчёт.
+- [x] CI-фикс (fix-4): argparse metavar 3.13+ vs 3.12 → нормализация токенов, проверено 3.12/3.14 × COLUMNS. Update-гайд RU+EN. Commit 40b51f0 запушен, ран 38420700784.
+- [x] CI green: ран 38420700784 success (18:17 MSK) — красные раны закрыты.
+- [x] Done: коммит ниже, дерево чистое, всё запушено. Финальный отчёт — следующим сообщением.
 - Wiki-remote: not found 17:10 (>25 мин) → user-step (создать первую страницу в web-wiki).
 - [ ] Live batch (2 видео, --jobs 2, --resume повтор) + Whisper-tiny на реальном аудио. Затем done + отчёт.
 - [x] Done v0.2 (16:34 MSK, до дедлайна 17:31): коммит ниже, дерево чистое. Live-доказательства: single→9 файлов exit 0, report.html 33 ссылки, search 38–57 хитов, serve 200, export 61/487, stats таблица+JSON, thumbnail.jpg.
