@@ -297,7 +297,11 @@ def write_index(
 
 
 def _entry_thumb(out_dir: Path, dirname: str | None) -> str | None:
-    """Прочитать thumbnail_file из <out>/<dir>/meta.json; нет файла -> None."""
+    """Прочитать thumbnail_file из <out>/<dir>/meta.json; нет файла -> None.
+
+    Имя возвращается только если файл физически существует (защита от битого
+    <img> после ручного удаления thumbnail.jpg).
+    """
     if not dirname:
         return None
     try:
@@ -305,7 +309,14 @@ def _entry_thumb(out_dir: Path, dirname: str | None) -> str | None:
     except Exception:
         return None
     thumb = record.get("thumbnail_file") if isinstance(record, dict) else None
-    return thumb if isinstance(thumb, str) and thumb else None
+    if not isinstance(thumb, str) or not thumb:
+        return None
+    try:
+        if not (out_dir / dirname / thumb).is_file():
+            return None
+    except Exception:
+        return None
+    return thumb
 
 
 def _entry_stats(out_dir: Path, dirname: str | None) -> tuple[Any, Any]:

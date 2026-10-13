@@ -205,7 +205,8 @@ def render_index(
         if d and isinstance(thumb_file, str) and thumb_file:
             src = f"{html.escape(d, quote=True)}/{html.escape(thumb_file, quote=True)}"
             thumb = (
-                f'<img src="{src}" loading="lazy" alt="" style="width:120px">'
+                f'<img src="{src}" loading="lazy" alt="" '
+                f'style="width:120px;margin-right:8px;vertical-align:middle">'
             )
         rows.append(
             f"<tr><td>{thumb}<a href=\"{href}\">{html.escape(title, quote=False)}</a></td>"

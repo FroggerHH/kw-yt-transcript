@@ -114,9 +114,11 @@ tests/           — stubs yt-dlp/transcript/whisper, без сети (M5: XDG t
 ## v0.2 Волна 8 (галерея обложек в index.html, аддитивно)
 - `outputs.write_index`/`_write_index_html`: `thumbnail_file` читается из
   `meta.json` папок (best-effort, нет файла → null); схема index.json обратно
-  совместима (только новое опциональное поле). `render_index`: первая колонка
-  таблицы — `<img src="{dir}/thumbnail.jpg" loading="lazy">` (120px) при наличии
-  обложки, иначе старое поведение без img.
+  совместима (только новое опциональное поле). `render_index`: в начале ячейки
+  названия — `<img src="{dir}/thumbnail.jpg" loading="lazy">` (120px, отступ
+  справа) при наличии обложки, иначе старое поведение без img.
+  `_entry_thumb` возвращает имя только если файл физически существует
+  (защита от битого `<img>` после ручного удаления thumbnail.jpg).
 
 ## v0.2 Волна 7 (обложки, аддитивно, оркестратор напрямую)
 - `outputs.fetch_thumbnail` (stdlib urllib, только image/*, лимит 5 МБ,

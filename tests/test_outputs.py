@@ -311,3 +311,28 @@ def test_write_index_without_thumbs_no_img(tmp_path):
     body = (tmp_path / "index.html").read_text(encoding="utf-8")
     assert "<img" not in body
     assert "<table>" in body
+
+
+def test_write_index_deleted_thumb_no_img(tmp_path):
+    def opener(url, timeout):
+        return b"FAKEJPEG"
+
+    paths = write_video(tmp_path, _meta_with_thumbs(), segments(), "manual", thumb_opener=opener)
+    video_dir = Path(paths["dir"])
+    (video_dir / "thumbnail.jpg").unlink()  # ручное удаление обложки
+    dirname = video_dir.name
+    results = [
+        {
+            "meta": meta(),
+            "dir": dirname,
+            "origin": "manual",
+            "transcript_lang": "ru",
+            "error": None,
+        }
+    ]
+    index_path = write_index(tmp_path, results)
+    index = json.loads(index_path.read_text(encoding="utf-8"))
+    assert index["entries"][0]["thumbnail_file"] is None
+    body = (tmp_path / "index.html").read_text(encoding="utf-8")
+    assert "<img" not in body
+    assert "<table>" in body
