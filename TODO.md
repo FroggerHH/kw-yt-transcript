@@ -50,6 +50,14 @@
 ## Волна 10: CHANGELOG [x] (done, 181 passed, fix-3)
 - [x] Запись 0.2.0: волны 8–9 + review-циклы, счётчик 181; grep «Волна» = 9
 
+## Волна 17: Wiki-зеркало sync [x] (done 17:12, 191 passed, fix-3)
+- [x] 6/7 страниц вровень с волнами 12–16 (CI/uv/AI/EN/badges); формат коротких страниц сохранён
+- [x] Gates: pytest 191, readme-smoke 9 passed; только docs/wiki/
+
+## Волна 18: CHANGELOG-финал [ ] (fixer; волны 8–17 + ASR + reviews в запись 0.2.0)
+
+## Волна 18: CHANGELOG-финал [ ] (fixer; волны 8–17 + ASR + reviews в запись 0.2.0)
+
 ## Волна 11: GitHub + wiki [~] (репозиторий PUBLIC + main запушен; wiki — blocked, контент сохранён)
 - [x] Аудит секретов чист (только упоминание пути); `gh repo edit --visibility public` → PUBLIC
 - [x] `git push -u origin main` — вся история на GitHub (FroggerHH/kw-yt-transcript)

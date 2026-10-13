@@ -24,7 +24,9 @@
 - [x] Волна 14 (fix-3): uv-миграция (uv.lock 35 пакетов, .python-version 3.14, CI setup-uv, README uv-first). Gates: sync чисто, 188 passed, ruff clean.
 - [x] Волна 15 (fix-3, retry после rate limit): README_EN.md 1:1 + шапки-ссылки + тест EN. Gates: 189 passed, ruff clean.
 - [x] Волна 16 (fix-3): rich README (бейджи, TOC с якорями, highlights+demo, FAQ по коду). Gates: 190 passed, ruff clean.
-- [ ] Wiki-пуш + done: коммит ниже, повтор клона wiki, отчёт.
+- [x] Review-финал (ora-3 → fix-3 + оркестратор): 8 пунктов без блокеров, classifier 3.14, lock чисто, LICENSE MIT. Gates: 191 passed, ruff clean. Commit b32f2d2 запушен.
+- [ ] Волна 17 (fixer): wiki-зеркало docs/wiki вровень с README (волны 12–16: CI/uv/AI/EN/badges). Затем done + отчёт.
+- Wiki-remote: not found 17:10 (>25 мин) → user-step (создать первую страницу в web-wiki).
 - [ ] Live batch (2 видео, --jobs 2, --resume повтор) + Whisper-tiny на реальном аудио. Затем done + отчёт.
 - [x] Done v0.2 (16:34 MSK, до дедлайна 17:31): коммит ниже, дерево чистое. Live-доказательства: single→9 файлов exit 0, report.html 33 ссылки, search 38–57 хитов, serve 200, export 61/487, stats таблица+JSON, thumbnail.jpg.
 - [x] Волна 6 (оркестратор): `kw-yt stats` (summarize + таблица/JSON, exit 0/1/2). Gates: 173 passed, ruff clean, live таблица+JSON ok.
