@@ -35,3 +35,9 @@ tests/           — stubs yt-dlp/transcript/whisper, без сети (M5: XDG t
 - Дедуп входов по ключу (video_id или url) с сохранением порядка; мусорные токены — error-entries, batch идёт дальше (только мусор → exit 2 без index).
 - Запись атомарная: `*.tmp` + `os.replace` для meta.json/transcript.*/index.json.
 - Отчёт обогащён: `meta.json` — transcript_lang, fetched_at (UTC ISO), tool_version, asr_model (при origin whisper); `index.json` — playlist_url + transcript_lang в entries.
+
+## v0.2 Волна 1 (HTML + статистика, аддитивно)
+- **stats.py** — `compute_stats(segments, duration_sec, top_n=10) -> {words, chars, reading_time_min (words/180), speaking_wpm (words/span_min по сегментам, None без спанов), top_keywords (TF по `[a-zа-яё]{3,}`, стоп-слова ru/en встроены)}`. Только stdlib.
+- **report.py** — `render_report(meta, segments, stats, origin)` (один HTML: meta charset, встроенные style/script, главы `youtu.be/{id}?t=`, реплики `watch?v={id}&t={s}s`, поиск с подсветкой, escape) и `render_index(entries_info, corpus)` (таблица + сводка). Всё на русском.
+- **outputs.py** — `write_video` всегда пишет `report.html` + `stats` в `meta.json`; `write_index` всегда пишет `index.html` рядом с `index.json` (ссылки `dir/report.html`). 5 форматов не менялись.
+- **formats.py `to_md`** — в шапку добавлены строки слов/времени чтения/топ-3 (сигнатура та же).

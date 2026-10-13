@@ -47,8 +47,8 @@ def test_write_video_all_files(tmp_path):
     paths = write_video(tmp_path, meta(), segments(), "manual")
     video_dir = Path(paths["dir"])
     assert video_dir.name == "testovoe-video-pro-transkripty_dQw4w9WgXcQ"
-    assert set(paths) == {"dir", "meta", "srt", "vtt", "json", "txt", "md"}
-    for key in ("meta", "srt", "vtt", "json", "txt", "md"):
+    assert set(paths) == {"dir", "meta", "srt", "vtt", "json", "txt", "md", "report"}
+    for key in ("meta", "srt", "vtt", "json", "txt", "md", "report"):
         assert Path(paths[key]).is_file(), key
     record = json.loads(Path(paths["meta"]).read_text(encoding="utf-8"))
     assert record["title"] == "Тестовое видео про транскрипты"  # ensure_ascii=False
@@ -60,7 +60,7 @@ def test_write_video_all_files(tmp_path):
 
 def test_write_video_format_filter(tmp_path):
     paths = write_video(tmp_path, meta(), segments(), "auto", formats_sel="txt")
-    assert set(paths) == {"dir", "meta", "txt"}
+    assert set(paths) == {"dir", "meta", "txt", "report"}
     assert (Path(paths["dir"]) / "transcript.txt").is_file()
     assert not (Path(paths["dir"]) / "transcript.srt").exists()
 
@@ -153,3 +153,48 @@ def test_atomic_write_no_partial_files(tmp_path, monkeypatch):
     names = {p.name for p in video_dir.iterdir()} if video_dir.is_dir() else set()
     assert "transcript.srt" not in names
     assert not [n for n in names if n.endswith(".tmp")], names
+
+
+def test_write_video_report_always_and_stats_in_meta(tmp_path):
+    paths = write_video(tmp_path, meta(), segments(), "manual", formats_sel="txt")
+    report = Path(paths["report"])
+    assert report.name == "report.html" and report.is_file()
+    body = report.read_text(encoding="utf-8")
+    assert "<meta charset" in body and "dQw4w9WgXcQ" in body
+    record = json.loads(Path(paths["meta"]).read_text(encoding="utf-8"))
+    assert set(record["stats"]) == {
+        "words",
+        "chars",
+        "reading_time_min",
+        "speaking_wpm",
+        "top_keywords",
+    }
+    assert record["stats"]["words"] > 0
+
+
+def test_write_index_also_writes_html(tmp_path):
+    paths = write_video(tmp_path, meta(), segments(), "manual")
+    from kw_yt_transcript.outputs import write_index as _wi
+
+    results = [
+        {
+            "meta": meta(),
+            "dir": Path(paths["dir"]).name,
+            "origin": "manual",
+            "transcript_lang": "ru",
+            "error": None,
+        }
+    ]
+    index_path = _wi(tmp_path, results)
+    index_html = Path(tmp_path) / "index.html"
+    assert index_html.is_file()
+    body = index_html.read_text(encoding="utf-8")
+    assert "report.html" in body
+    assert f"{Path(paths['dir']).name}/report.html" in body
+
+
+def test_md_header_has_stats(tmp_path):
+    from kw_yt_transcript.formats import to_md
+
+    out = to_md(segments(), {**meta(), "origin": "manual"})
+    assert "Слов:" in out and "Время чтения:" in out and "Ключевые слова:" in out

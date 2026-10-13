@@ -172,7 +172,7 @@ def test_format_filter(monkeypatch, tmp_path):
     assert cli_mod.main([VIDS[0], "--format", "txt", "-o", str(out)]) == 0
     (video_dir,) = [d for d in out.iterdir() if d.is_dir()]
     names = {p.name for p in video_dir.iterdir()}
-    assert names == {"meta.json", "transcript.txt"}
+    assert names == {"meta.json", "transcript.txt", "report.html"}
 
 
 def test_exit_2_empty_and_garbage():

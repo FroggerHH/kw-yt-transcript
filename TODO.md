@@ -1,5 +1,25 @@
 # TODO.md — kw-yt-transcript
 
+## v0.2 Волны (старт 14:31 MSK, дедлайн 17:31 MSK)
+## Волна 1: HTML + статистика [x] (done 14:34, 116 passed)
+- [x] stats.py (words/chars/reading_time/wpm/top_keywords ru/en стоп-слова) + tests
+- [x] report.py (report.html на видео + index.html на batch, кликабельные ?t=, поиск с подсветкой, только stdlib) + tests
+- [x] outputs write_video → +report.html +stats в meta.json; write_index → +index.html; MD-шапка со статистикой
+- [x] Gates: pytest 116 зелёный, --help exit 0 (stale test_format_filter починен оркестратором)
+
+## Волна 2: Поиск + serve + скорость [ ] (после волны 1)
+- [ ] search.py (`kw-yt search <q> --in --context`, ранжирование, exit 0/1) + tests
+- [ ] serve.py (`kw-yt serve DIR [--port]`, stdlib http) + tests (200 на index)
+- [ ] cli: subcommands search/serve, --jobs N (порядок index стабильный), --resume, кэш метаданных TTL, конфиг ~/.config/kw-yt/config.toml
+- [ ] Gates: pytest, serve 200 локально, --resume без сети (тест со счётчиком)
+
+## Волна 3: Релиз 0.2.0 [ ] (после волны 2)
+- [ ] Oracle-review diff, фикс findings, README v0.2, версия 0.2.0, CHANGELOG
+- [ ] Live: single → report.html; search по живому корпусу; Gates M4/M5
+- [ ] Если время до 17:31 осталось — волна 4 (jsonl/csv экспорт, completion, thumbnails в HTML, главы-файлы)
+
+## v0.1 (done)
+
 ## Фаза 1: Скелет + CLI [x] (done 2026-10-13, 9ae4d9b)
 - [x] pyproject.toml (project kw-yt-transcript 0.1.0, deps yt-dlp, youtube-transcript-api; extra asr faster-whisper; entry kw-yt), пакет kw_yt_transcript/, `kw-yt --help/--version` RU
 - [x] inputs.py (single id/URL, multi split, --from-file, playlist detect) + unit tests (stubs, без сети)

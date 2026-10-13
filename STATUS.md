@@ -1,5 +1,13 @@
 # STATUS.md — kw-yt-transcript
 
+## v0.2 (старт 14:31 MSK 2026-10-13, дедлайн 17:31 MSK — требование пользователя: больше функционала)
+- Причина: пользователь счёл v0.1 минимальной. Scope v0.2 в SPEC.md (HTML, статистика, search, serve, jobs/resume/cache/config).
+- [x] Волна 1 (fix-2, 14:34): stats.py + report.py + outputs (report.html/index.html/stats в meta). Gates: 116 passed, --help exit 0.
+- [ ] Волна 2 (fix-2 reuse, background): search.py + serve.py + cli (subcommands, --jobs, --resume, кэш TTL, конфиг). Acceptance: pytest, serve 200, --resume без сети.
+- Next: волна 3 (review + 0.2.0 + live) → волна 4 если время до 17:31 осталось.
+
+---
+
 ## Phase 0: Bootstrap (2026-10-13, verified)
 - [x] Plugin config: `~/.config/opencode/oh-my-opencode-slim.json` существует, preset=`muse`, orchestrator=`opencode/muse-spark-1.3-contributor-free` (совпадает с текущей моделью).
 - [x] OpenCode config: `opencode.json` отсутствует, есть `opencode.jsonc` с `plugin: ["oh-my-opencode-slim", "session-skills"]` — плагин загружен.

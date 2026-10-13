@@ -109,11 +109,27 @@ def to_txt(segments: list[dict[str, Any]], meta: dict[str, Any] | None = None) -
 
 
 def to_md(segments: list[dict[str, Any]], meta: dict[str, Any] | None = None) -> str:
-    """Markdown: header (title/автор/дата/длительность/источник) + главы + абзацы."""
+    """Markdown: header (title/автор/дата/длительность/источник/статистика) + главы + абзацы."""
     if not segments:
         return ""
     meta = meta or {}
     origin = _ORIGIN_LABELS.get(str(meta.get("origin", "")), str(meta.get("origin", "") or "—"))
+    stats = meta.get("stats")
+    if not isinstance(stats, dict) or "words" not in stats:
+        try:
+            from kw_yt_transcript.stats import compute_stats
+
+            stats = compute_stats(segments, meta.get("duration"))
+        except Exception:
+            stats = {}
+    words = stats.get("words", 0) if isinstance(stats, dict) else 0
+    reading = stats.get("reading_time_min", 0.0) if isinstance(stats, dict) else 0.0
+    try:
+        reading_s = f"{float(reading):.1f}"
+    except Exception:
+        reading_s = "0.0"
+    top = stats.get("top_keywords", []) if isinstance(stats, dict) else []
+    top3 = ", ".join(str(k.get("word", "")) for k in top[:3] if isinstance(k, dict)) or "—"
     lines = [
         f"# {meta.get('title') or 'Транскрипт'}",
         "",
@@ -123,6 +139,9 @@ def to_md(segments: list[dict[str, Any]], meta: dict[str, Any] | None = None) ->
         if meta.get("duration") is not None
         else "- Длительность: —",
         f"- Источник текста: {origin}",
+        f"- Слов: {words}",
+        f"- Время чтения: {reading_s} мин",
+        f"- Ключевые слова: {top3}",
         "",
     ]
     chapters = meta.get("chapters") or []

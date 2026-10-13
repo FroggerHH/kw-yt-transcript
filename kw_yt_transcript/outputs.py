@@ -15,6 +15,8 @@ from typing import Any
 
 from kw_yt_transcript import __version__
 from kw_yt_transcript.formats import FORMATS
+from kw_yt_transcript.report import render_index, render_report
+from kw_yt_transcript.stats import compute_stats
 
 #: Имя формата -> имя файла транскрипта.
 TRANSCRIPT_FILENAMES = {
@@ -103,17 +105,37 @@ def write_video(
     record["tool_version"] = __version__
     if origin == "whisper" and asr_model:
         record["asr_model"] = asr_model
+    try:
+        record["stats"] = compute_stats(segments, record.get("duration"))
+    except Exception:
+        record["stats"] = {
+            "words": 0,
+            "chars": 0,
+            "reading_time_min": 0.0,
+            "speaking_wpm": None,
+            "top_keywords": [],
+        }
     meta_path = video_dir / "meta.json"
     _atomic_write_text(meta_path, json.dumps(record, ensure_ascii=False, indent=2))
 
     md_meta = dict(meta)
     md_meta["origin"] = origin
+    md_meta["stats"] = record["stats"]
     paths: dict[str, str] = {"dir": str(video_dir), "meta": str(meta_path)}
     for name in _resolve_formats(formats_sel):
         content = FORMATS[name](segments, md_meta)
         file_path = video_dir / TRANSCRIPT_FILENAMES[name]
         _atomic_write_text(file_path, content)
         paths[name] = str(file_path)
+    try:
+        report_meta = dict(record)
+        report_html = render_report(report_meta, segments, record["stats"], origin)
+    except Exception:
+        report_html = "<!DOCTYPE html>\n<html lang=\"ru\">\n<head>\n<meta charset=\"utf-8\">\n"
+        report_html += "<title>Отчёт</title>\n</head>\n<body><p>Отчёт недоступен.</p>\n</body>\n</html>\n"
+    report_path = video_dir / "report.html"
+    _atomic_write_text(report_path, report_html)
+    paths["report"] = str(report_path)
     return paths
 
 
@@ -149,4 +171,63 @@ def write_index(
     }
     index_path = Path(out_dir) / "index.json"
     _atomic_write_text(index_path, json.dumps(index, ensure_ascii=False, indent=2))
+    try:
+        _write_index_html(Path(out_dir), results)
+    except OSError:
+        raise
+    except Exception:
+        pass
     return index_path
+
+
+def _entry_stats(out_dir: Path, dirname: str | None) -> tuple[Any, Any]:
+    """Прочитать stats.words из <out>/<dir>/meta.json; нет файла -> (None, None)."""
+    if not dirname:
+        return None, None
+    try:
+        record = json.loads((out_dir / dirname / "meta.json").read_text(encoding="utf-8"))
+    except Exception:
+        return None, None
+    stats = record.get("stats") or {}
+    return stats.get("words"), record.get("duration")
+
+
+def _write_index_html(out_dir: Path, results: list[dict[str, Any]]) -> None:
+    entries_info: list[dict[str, Any]] = []
+    total_words = 0
+    total_sec = 0.0
+    ok = 0
+    for r in results:
+        meta = r.get("meta") or {}
+        dirname = r.get("dir")
+        words, dur = _entry_stats(out_dir, dirname)
+        if words is None:
+            words = "—"
+        else:
+            try:
+                total_words += int(words)
+            except Exception:
+                pass
+        duration = meta.get("duration")
+        if duration is None:
+            duration = dur
+        try:
+            if duration is not None and not r.get("error"):
+                total_sec += float(duration)
+        except Exception:
+            pass
+        if not r.get("error"):
+            ok += 1
+        entries_info.append(
+            {
+                "title": meta.get("title"),
+                "video_id": meta.get("video_id"),
+                "dir": dirname,
+                "author": meta.get("channel") or meta.get("author"),
+                "duration": duration,
+                "words": words,
+                "origin": r.get("origin"),
+            }
+        )
+    corpus = {"n_videos": ok, "total_words": total_words, "total_min": total_sec / 60.0}
+    _atomic_write_text(out_dir / "index.html", render_index(entries_info, corpus))

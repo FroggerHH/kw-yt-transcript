@@ -1,0 +1,85 @@
+"""Тесты report: ссылки ?t=, escape, главы, поиск, index. Без сети."""
+
+from kw_yt_transcript.report import render_index, render_report
+from kw_yt_transcript.stats import compute_stats
+
+
+def _meta():
+    return {
+        "video_id": "dQw4w9WgXcQ",
+        "title": "Тестовое видео",
+        "channel": "Тестовый канал",
+        "upload_date": "20260115",
+        "duration": 372,
+        "transcript_lang": "ru",
+        "chapters": [
+            {"start_time": 0.0, "end_time": 60.0, "title": "Вступление"},
+            {"start_time": 60.0, "end_time": 372.0, "title": "Основная часть"},
+        ],
+    }
+
+
+def _segs():
+    return [
+        {"text": "Привет, это первый сегмент.", "start": 0.0, "duration": 2.5},
+        {"text": "Второй сегмент.", "start": 65.0, "duration": 2.0},
+    ]
+
+
+def test_report_timestamp_links():
+    html = render_report(_meta(), _segs(), compute_stats(_segs(), 372), "manual")
+    assert '<meta charset' in html
+    assert "https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=0s" in html
+    assert "https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=65s" in html
+
+
+def test_report_chapters_links():
+    html = render_report(_meta(), _segs(), compute_stats(_segs(), 372), "manual")
+    assert "https://youtu.be/dQw4w9WgXcQ?t=0" in html
+    assert "https://youtu.be/dQw4w9WgXcQ?t=60" in html
+    assert "Вступление" in html
+
+
+def test_report_escapes_script():
+    meta = _meta()
+    segs = [{"text": "<script>alert(1)</script>", "start": 0.0, "duration": 1.0}]
+    html = render_report(meta, segs, compute_stats(segs, 1), "auto")
+    assert "<script>alert(1)</script>" not in html
+    assert "&lt;script&gt;" in html
+    # пользовательский title тоже экранируется
+    meta2 = dict(meta, title="<b>заголовок</b>")
+    html2 = render_report(meta2, segs, compute_stats(segs, 1), "auto")
+    assert "<b>заголовок</b>" not in html2
+
+
+def test_report_search_input_and_inline_assets():
+    html = render_report(_meta(), _segs(), compute_stats(_segs(), 372), "manual")
+    assert 'type="search"' in html and 'id="search"' in html
+    assert "<style>" in html and "<script>" in html
+    assert "<link" not in html and "<script src" not in html and 'src="http' not in html
+
+
+def test_report_header_and_stats_ru():
+    html = render_report(_meta(), _segs(), compute_stats(_segs(), 372), "manual")
+    assert "Тестовое видео" in html and "Тестовый канал" in html
+    assert "ручные субтитры" in html
+    assert "Статистика" in html and "Слов:" in html
+
+
+def test_index_table_and_links():
+    entries = [
+        {
+            "title": "Видео один",
+            "video_id": "id1",
+            "dir": "video-odin_id1",
+            "author": "Автор",
+            "duration": 100,
+            "words": 50,
+            "origin": "manual",
+        }
+    ]
+    html = render_index(entries, {"n_videos": 1, "total_words": 50, "total_min": 1.7})
+    assert '<meta charset' in html
+    assert "video-odin_id1/report.html" in html
+    assert "<table>" in html and "Видео один" in html
+    assert "Всего видео: 1" in html
