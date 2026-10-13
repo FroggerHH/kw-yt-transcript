@@ -10,6 +10,7 @@
 - **Claim:** Субтитры YouTube primary, Whisper fallback.
 - **Checked:** lib-1: ytt-api fetch(languages=['ru','en']) + find_manually_created→generated; formatters SRT/VTT встроены; faster-whisper 1.2.1 CPU int8 без ffmpeg, openai-whisper требует ffmpeg+torch и Python ≤3.11 заявлено.
 - **Outcome:** accepted — primary `youtube-transcript-api`, fallback `faster-whisper` (extra `asr`), openai-whisper rejected.
+- **Поправка (Python 3.14, live):** faster-whisper 1.2.1 + PyAV ≥ 15 падает (`av.open(metadata_errors=...)` → TypeError); на 3.14 у старого PyAV нет колёс — downgrade не вариант. Обход: системный ffmpeg декодирует аудио в ndarray (float32, 16 кГц), модель принимает его штатно. Пин `av` не требуется.
 
 ## D3: Форматы вывода (accepted)
 - **Claim:** 5 файлов на видео покрывают «таймкоды + читаемый».

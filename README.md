@@ -41,6 +41,11 @@ pipx install ".[asr]"
 # или: pip install -e ".[asr]"
 ```
 
+> Если на Python 3.14 faster-whisper падает с `TypeError: ... metadata_errors ...`
+> (PyAV ≥ 15 несовместим с faster-whisper 1.2.1) — ничего делать не нужно:
+> `kw-yt` сам декодирует аудио системным `ffmpeg` и передаёт модели готовые
+> сэмплы. Downgrade PyAV не требуется (под 3.14 у старого PyAV всё равно нет колёс).
+
 Проверка установки:
 
 ```bash

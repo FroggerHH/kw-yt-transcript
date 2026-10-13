@@ -30,6 +30,11 @@ tests/           — stubs yt-dlp/transcript/whisper, без сети (M5: XDG t
 - Fallback языков `ru→en→first available` через `languages=[...]` + `TranscriptList` при `NotAvailableLanguage`.
 - Читаемый текст: склейка сегментов, разбивка на абзацы по паузе/д Schlange, MD с header (title/channel/date/origin) + главы если есть.
 - Whisper — опциональный extra, lazy import, временное аудио чистится.
+  PyAV ≥ 15 + faster-whisper 1.2.1 → TypeError `metadata_errors`: fallback
+  `_decode_via_ffmpeg` (системный ffmpeg → wav 16 кГц моно → ndarray float32),
+  повтор `model.transcribe` без PyAV; wav чистится. Цепочка VAD: сначала
+  `vad_filter=True`, при пустом результате — повтор без VAD (Silero режет
+  музыку: live 0 vs 54 сегментов).
 - Свои сериализаторы SRT/VTT вместо youtube_transcript_api.formatters: форматтерам нужны FetchedTranscript-объекты, а у нас плоские dict-сегменты {text, start, duration}; таймкоды совпадают.
 - Сеть только в `metadata`/`transcript`/`asr` + `cli.expand_playlist` (flat extract оглавления) + `outputs.fetch_thumbnail` (обложки, волна 7); тесты мокают.
 - Дедуп входов по ключу (video_id или url) с сохранением порядка; мусорные токены — error-entries, batch идёт дальше (только мусор → exit 2 без index).

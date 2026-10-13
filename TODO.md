@@ -50,9 +50,23 @@
 ## Волна 10: CHANGELOG [x] (done, 181 passed, fix-3)
 - [x] Запись 0.2.0: волны 8–9 + review-циклы, счётчик 181; grep «Волна» = 9
 
-## Финал v0.2: свежий venv + live [x] (done 16:41, оркестратор напрямую)
+## Волна 11: GitHub + wiki [~] (репозиторий ПУБЛИЧНЫЙ, wiki ждёт провиженинга)
+- [x] Аудит секретов чист (только упоминание пути); `gh repo edit --visibility public` → PUBLIC
+- [x] `git push -u origin main` — вся история на GitHub (FroggerHH/kw-yt-transcript)
+- [ ] Wiki-remote `...wiki.git` всё ещё not found (и 403 ранее) — страницы готовы в /tmp/opencode/kw-wiki (7 шт)
+- [ ] Повтор клона перед done; иначе user-step: открыть вкладку Wiki один раз
 - [x] /tmp/kw-final: pip install . → 0.2.0, 5×--help exit 0, pip check чисто
 - [x] Live: fetch exit 0 (10 файлов), export 61/487, stats таблица, search 38, serve 200
+
+## Волна 12: GitHub Actions CI [ ] (queued, после ASR-fallback)
+- [ ] .github/workflows/ci.yml: matrix Python 3.11–3.13, pip install -e . + pytest, ruff E/F/W/I/UP; запуск на push/PR
+- [ ] README-бейдж CI; Gates: green на первом пуше
+
+## Волна 13: AI-generated warning [ ] (queued, после ASR-fallback)
+- [ ] README: плашка «проект разработан при участии ИИ; субтитры auto/whisper распознаны ИИ — возможны ошибки»
+- [ ] report.html: баннер «⚠ текст распознан ИИ, возможны ошибки» при origin auto/whisper (manual — без баннера)
+- [ ] transcript.md/txt: строка-предупреждение в шапку при auto/whisper; meta.json уже имеет origin
+- [ ] Тесты баннера ×3 origin + test_readme-маркер; Gates: pytest зелёный
 
 ## Волна 4: Экспорт + completion [x] (done 16:18, 163 passed, оркестратор напрямую)
 - [x] formats jsonl/csv (+реестр FORMATS, filenames, --format choices), тесты round-trip/quoting/empty/header

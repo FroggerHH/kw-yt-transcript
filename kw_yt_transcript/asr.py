@@ -3,12 +3,17 @@
 Импорт faster-whisper и скачивание аудио — ленивые, внутри функций:
 ``kw-yt --help`` и тесты работают без extra-зависимости, сети и ffmpeg
 (подменяются через ``model_factory`` / ``downloader``).
+PyAV ≥ 15 несовместим с faster-whisper 1.2.1 (TypeError metadata_errors):
+при таком TypeError аудио декодируется системным ffmpeg в ndarray
+(``_decode_via_ffmpeg``) и вызов повторяется без PyAV.
 """
 
 from __future__ import annotations
 
 import shutil
+import subprocess
 import tempfile
+import wave
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -27,6 +32,91 @@ def _default_model_factory(model_name: str):
             "pip install kw-yt-transcript[asr]"
         ) from e
     return WhisperModel(model_name)
+
+
+def _map_segments(raw: Any) -> list[dict[str, Any]]:
+    """Сырые сегменты faster-whisper -> [{text, start, duration}]."""
+    return [
+        {
+            "text": str(s.text).strip(),
+            "start": float(s.start),
+            "duration": float(s.end) - float(s.start),
+        }
+        for s in list(raw)
+    ]
+
+
+#: Таймаут декодирования аудио через ffmpeg (5 минут на файл).
+_DECODE_TIMEOUT_SEC = 300
+
+
+def _decode_via_ffmpeg(audio_path: str, tmpdir: str) -> Any:
+    """Декодировать аудио системным ffmpeg в ndarray (float32, 16 кГц, моно).
+
+    Обход несовместимости faster-whisper 1.2.1 с PyAV ≥ 15
+    (``av.open(..., metadata_errors="ignore")`` падает с TypeError):
+    модель штатно принимает ndarray вместо пути, PyAV не задействуется.
+
+    :raises ASRError: нет ffmpeg/numpy, ffmpeg не справился, wav не читается.
+    """
+    if shutil.which("ffmpeg") is None:
+        raise ASRError("Нет ffmpeg. Установите ffmpeg — он нужен для скачивания аудио.")
+    try:
+        import numpy as np
+    except ImportError as e:
+        raise ASRError(
+            "Нет модуля numpy. Установите ASR-зависимость: "
+            "pip install kw-yt-transcript[asr]"
+        ) from e
+    out_wav = str(Path(tmpdir) / "decode-16k-mono.wav")
+    try:
+        subprocess.run(
+            ["ffmpeg", "-y", "-i", str(audio_path),
+             "-ar", "16000", "-ac", "1", "-f", "wav", out_wav],
+            check=True,
+            capture_output=True,
+            timeout=_DECODE_TIMEOUT_SEC,
+        )
+    except FileNotFoundError as e:
+        raise ASRError("Нет ffmpeg. Установите ffmpeg — он нужен для скачивания аудио.") from e
+    except subprocess.TimeoutExpired as e:
+        raise ASRError(
+            f"ffmpeg не успел подготовить аудио за {_DECODE_TIMEOUT_SEC} с: {audio_path!r}."
+        ) from e
+    except subprocess.CalledProcessError as e:
+        raise ASRError(
+            f"ffmpeg не смог подготовить аудио {audio_path!r} (код {e.returncode})."
+        ) from e
+    try:
+        with wave.open(out_wav, "rb") as wf:
+            n_channels = wf.getnchannels()
+            sampwidth = wf.getsampwidth()
+            frames = wf.readframes(wf.getnframes())
+    except Exception as e:
+        raise ASRError(f"Не удалось прочитать wav после ffmpeg: {e}") from e
+    if sampwidth != 2 or not frames:
+        raise ASRError("ffmpeg вернул аудио не в формате int16 — распознавание невозможно.")
+    pcm = np.frombuffer(frames, dtype=np.int16).astype(np.float32) / 32768.0
+    if n_channels > 1:
+        pcm = pcm.reshape(-1, n_channels).mean(axis=1)
+    return pcm
+
+
+def _transcribe_vad_chain(transcribe_call: Callable[[bool], Any]) -> list[dict[str, Any]]:
+    """Вызов модели с цепочкой VAD: сначала ``vad_filter=True``, при пустом
+    результате — повтор с ``vad_filter=False``.
+
+    VAD Silero агрессивен на музыке (live-доказательство: 0 сегментов с VAD
+    против 54 без него на том же треке) — пустой результат не приговор.
+    Возможные галлюцинации без VAD покрываются маркировкой origin=whisper.
+    Исключения не перехватываются — их разбирает вызывающий код.
+    """
+    raw, _info = transcribe_call(True)
+    segments = _map_segments(raw)
+    if not segments:
+        raw, _info = transcribe_call(False)
+        segments = _map_segments(raw)
+    return segments
 
 
 def _download_bestaudio(video_url: str, tmpdir: str) -> str:
@@ -96,15 +186,28 @@ def transcribe_whisper(
                 "pip install kw-yt-transcript[asr]"
             ) from e
         try:
-            raw_segments, _info = model.transcribe(audio, vad_filter=True)
-            segments = [
-                {
-                    "text": str(s.text).strip(),
-                    "start": float(s.start),
-                    "duration": float(s.end) - float(s.start),
-                }
-                for s in list(raw_segments)
-            ]
+            segments = _transcribe_vad_chain(
+                lambda vad: model.transcribe(audio, vad_filter=vad)
+            )
+        except TypeError as e:
+            if "metadata_errors" not in str(e):
+                raise ASRError(f"Whisper не смог распознать аудио: {e}") from e
+            # PyAV ≥ 15 несовместим с faster-whisper 1.2.1
+            # (av.open(metadata_errors=...) падает): декодируем сами через
+            # ffmpeg и повторяем вызов с ndarray — PyAV не задействуется.
+            own_decode_dir = tmpdir is None
+            decode_dir = tmpdir or tempfile.mkdtemp(prefix="kw-yt-asr-decode-")
+            try:
+                samples = _decode_via_ffmpeg(audio, decode_dir)
+                try:
+                    segments = _transcribe_vad_chain(
+                        lambda vad: model.transcribe(samples, vad_filter=vad)
+                    )
+                except Exception as e2:
+                    raise ASRError(f"Whisper не смог распознать аудио: {e2}") from e2
+            finally:
+                if own_decode_dir:
+                    shutil.rmtree(decode_dir, ignore_errors=True)
         except Exception as e:
             raise ASRError(f"Whisper не смог распознать аудио: {e}") from e
         if not segments:

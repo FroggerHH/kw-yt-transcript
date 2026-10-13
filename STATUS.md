@@ -16,7 +16,12 @@
 - [x] Review волны 8 (ora-3 → fix-3): 2 polish без блокеров (is_file, отступ). Gates: 181 passed, ruff clean.
 - [x] Волна 9 (fix-3): аудит README против CLI (10 файлов, обложки, конфиг-фолбэк). Gates: 181 passed, ruff clean.
 - [x] Волна 10 (fix-3): CHANGELOG 0.2.0 (волны 8–9 + review-циклы, счётчик 181). Gates: 181 passed.
-- [x] Финал v0.2 (оркестратор): свежий venv /tmp/kw-final → 0.2.0, 5×help exit 0, pip check чисто; live fetch/export/stats/search/serve — всё exit 0/200.
+- [x] ASR av-fallback + VAD-цепочка (fix-3): live Whisper-tiny → origin whisper, 75 сегментов. Gates: 186 passed + 2 skipped, ruff clean.
+- [x] GitHub: аудит чист, репозиторий PUBLIC, main запушен (FroggerHH/kw-yt-transcript).
+- [ ] Wiki-remote not found (провиженинг): 7 страниц готовы локально, повтор перед done.
+- [ ] Волны 12 (CI) + 13 (AI-warning) → fixer; затем done + отчёт.
+- [ ] Волна 12 (queued, после ASR-fallback): GitHub Actions CI (matrix 3.11–3.13, pytest+ruff) + README-бейдж.
+- [ ] Волна 13 (queued, после ASR-fallback): AI-warning (баннер в report.html + строка в md/txt при origin auto/whisper).
 - [ ] Live batch (2 видео, --jobs 2, --resume повтор) + Whisper-tiny на реальном аудио. Затем done + отчёт.
 - [x] Done v0.2 (16:34 MSK, до дедлайна 17:31): коммит ниже, дерево чистое. Live-доказательства: single→9 файлов exit 0, report.html 33 ссылки, search 38–57 хитов, serve 200, export 61/487, stats таблица+JSON, thumbnail.jpg.
 - [x] Волна 6 (оркестратор): `kw-yt stats` (summarize + таблица/JSON, exit 0/1/2). Gates: 173 passed, ruff clean, live таблица+JSON ok.
