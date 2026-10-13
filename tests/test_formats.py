@@ -90,7 +90,39 @@ def test_empty_segments():
 
 
 def test_formats_registry_covers_all():
-    assert set(formats.FORMATS) == {"srt", "vtt", "json", "txt", "md"}
+    assert set(formats.FORMATS) == {"srt", "vtt", "json", "txt", "md", "jsonl", "csv"}
+
+
+def test_jsonl_round_trip_with_meta():
+    import json as _json
+
+    segs = [
+        {"text": "привет, мир", "start": 1.5, "duration": 2.0},
+        {"text": 'сказал "пока"', "start": 6.0, "duration": 1.0},
+    ]
+    meta = {"video_id": "dQw4w9WgXcQ", "title": "Тест"}
+    rows = [ _json.loads(line) for line in formats.to_jsonl(segs, meta).splitlines()]
+    assert [r["text"] for r in rows] == ["привет, мир", 'сказал "пока"']
+    assert all(r["video_id"] == "dQw4w9WgXcQ" and r["title"] == "Тест" for r in rows)
+    assert [r["start"] for r in rows] == [1.5, 6.0]
+    assert formats.to_jsonl([]) == ""
+    assert formats.to_jsonl([], None).splitlines() == []
+
+
+def test_csv_quoting_and_header():
+    import csv as _csv
+    import io as _io
+
+    segs = [
+        {"text": "a,b", "start": 0.0, "duration": 1.0},
+        {"text": 'c"d\ne', "start": 2.0, "duration": 1.5},
+    ]
+    out = formats.to_csv(segs, {"video_id": "id1", "title": "T"})
+    rows = list(_csv.reader(_io.StringIO(out)))
+    assert rows[0] == ["video_id", "title", "start", "duration", "text"]
+    assert rows[1][4] == "a,b" and rows[1][0] == "id1"
+    assert rows[2][4] == 'c"d\ne'
+    assert len(list(_csv.reader(_io.StringIO(formats.to_csv([]))))) == 1
 
 
 def test_paragraphs_edge_cases():

@@ -101,7 +101,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument(
         "--format",
-        choices=["srt", "vtt", "json", "txt", "md", "all"],
+        choices=["srt", "vtt", "json", "txt", "md", "jsonl", "csv", "all"],
         default="all",
         help="Формат вывода (по умолчанию all — все форматы).",
     )

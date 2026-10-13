@@ -1,4 +1,4 @@
-"""Форматы вывода SRT/VTT/JSON/TXT/MD (Фаза 2).
+"""Форматы вывода SRT/VTT/JSON/TXT/MD/JSONL/CSV (Фаза 2 + v0.2 Волна 4).
 
 Собственная реализация (без ``youtube_transcript_api.formatters``): форматтерам
 нужны объекты FetchedTranscript, а у нас плоские dict-сегменты; таймкоды
@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+import csv
+import io
 import json
 from typing import Any
 
@@ -101,6 +103,44 @@ def to_txt(segments: list[dict[str, Any]], meta: dict[str, Any] | None = None) -
     return "\n\n".join(paragraphs(segments))
 
 
+def to_jsonl(segments: list[dict[str, Any]], meta: dict[str, Any] | None = None) -> str:
+    """JSON Lines: по объекту ``{video_id, title, start, duration, text}`` на строку.
+
+    Удобно для RAG-корпусов (потоковое чтение). Пусто → ``""`` (ноль строк).
+    """
+    meta = meta or {}
+    lines = [
+        json.dumps(
+            {
+                "video_id": meta.get("video_id"),
+                "title": meta.get("title"),
+                "start": s["start"],
+                "duration": s["duration"],
+                "text": s["text"],
+            },
+            ensure_ascii=False,
+        )
+        for s in segments
+    ]
+    return "\n".join(lines) + ("\n" if lines else "")
+
+
+def to_csv(segments: list[dict[str, Any]], meta: dict[str, Any] | None = None) -> str:
+    """CSV: шапка ``video_id,title,start,duration,text`` + строки (stdlib csv).
+
+    Пусто → только шапка.
+    """
+    meta = meta or {}
+    buf = io.StringIO()
+    writer = csv.writer(buf, lineterminator="\n")
+    writer.writerow(["video_id", "title", "start", "duration", "text"])
+    for s in segments:
+        writer.writerow(
+            [meta.get("video_id"), meta.get("title"), s["start"], s["duration"], s["text"]]
+        )
+    return buf.getvalue()
+
+
 def to_md(segments: list[dict[str, Any]], meta: dict[str, Any] | None = None) -> str:
     """Markdown: header (title/автор/дата/длительность/источник/статистика) + главы + абзацы."""
     if not segments:
@@ -147,4 +187,12 @@ def to_md(segments: list[dict[str, Any]], meta: dict[str, Any] | None = None) ->
 
 
 #: Имя формата -> функция (пригодится batch-записи в Фазе 3).
-FORMATS = {"srt": to_srt, "vtt": to_vtt, "json": to_json, "txt": to_txt, "md": to_md}
+FORMATS = {
+    "srt": to_srt,
+    "vtt": to_vtt,
+    "json": to_json,
+    "txt": to_txt,
+    "md": to_md,
+    "jsonl": to_jsonl,
+    "csv": to_csv,
+}

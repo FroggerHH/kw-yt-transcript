@@ -22,7 +22,11 @@
 - [x] README v0.2 (search/serve/jobs/resume/кэш/конфиг/HTML/stats), версия 0.2.0, CHANGELOG
 - [x] test_readme: 3 парсера, новые маркеры, тест версии; Gates: pytest 160, ruff clean, --help/search --help exit 0
 - [x] Live acceptance п.11: single → exit 0, 7 файлов, report.html 33 таймкод-ссылки; search 38 хитов; serve 200 (1237 bytes)
-- [ ] Если время до 17:31 осталось — волна 4 (jsonl/csv экспорт, completion, thumbnails в HTML, главы-файлы)
+
+## Волна 4: Экспорт + completion [x] (done 16:18, 163 passed, оркестратор напрямую)
+- [x] formats jsonl/csv (+реестр FORMATS, filenames, --format choices), тесты round-trip/quoting/empty/header
+- [x] contrib/kw-yt-completion.bash + README + тест покрытия; README «7 форматов», live «семью»
+- [x] Gates: pytest 163, ruff clean, bash -n ok; live --format all → exit 0, 9 файлов, jsonl/csv валидны
 
 ## v0.1 (done)
 

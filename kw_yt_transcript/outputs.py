@@ -25,6 +25,8 @@ TRANSCRIPT_FILENAMES = {
     "json": "transcript.json",
     "txt": "transcript.txt",
     "md": "transcript.md",
+    "jsonl": "transcript.jsonl",
+    "csv": "transcript.csv",
 }
 
 #: Транслитерация кириллицы для slug (строчные; остальное вычищается regex).

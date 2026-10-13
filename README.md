@@ -9,7 +9,8 @@
 - плейлист целиком (развёртка + сводный `index.json`);
 - субтитры YouTube (ручные → авто, языки по приоритету `ru,en`);
 - Whisper-fallback, если субтитров нет (опциональный extra `asr`);
-- 5 форматов на видео: `srt`, `vtt`, `json`, `txt`, `md` — таймкоды + читаемый текст с абзацами;
+- 7 форматов на видео: `srt`, `vtt`, `json`, `txt`, `md` — таймкоды + читаемый текст,
+  плюс `jsonl`/`csv` для корпусов и RAG;
 - `report.html` на видео (метаданные, статистика, главы-ссылки, кликабельные таймкоды, поиск с подсветкой) и `index.html` на весь корпус — открываются в браузере без сервера;
 - статистика текста: слова, время чтения, темп речи, ключевые слова;
 - `kw-yt search` — поиск по сохранённым транскриптам с контекстом;
@@ -45,6 +46,12 @@ pipx install ".[asr]"
 ```bash
 kw-yt --help
 kw-yt --version
+```
+
+Автодополнение bash (опционально):
+
+```bash
+source contrib/kw-yt-completion.bash
 ```
 
 ## Использование
@@ -93,7 +100,7 @@ kw-yt serve ./out --port 8000
 | `--from-file ФАЙЛ` | — | файл со списком входов |
 | `--out, -o ПАПКА` | `./out` | папка результатов |
 | `--langs ЯЗЫКИ` | `ru,en` | языки субтитров через запятую, по приоритету |
-| `--format` | `all` | `srt`/`vtt`/`json`/`txt`/`md`/`all` |
+| `--format` | `all` | `srt`/`vtt`/`json`/`txt`/`md`/`jsonl`/`csv`/`all` (`jsonl` — строки для RAG, `csv` — таблица) |
 | `--no-fallback-whisper` | выкл | не распознавать речь, если субтитров нет |
 | `--whisper-model МОДЕЛЬ` | `small` | модель faster-whisper |
 | `--jobs, -j N` | `4` | параллельных загрузок (1–16, порядок в `index.json` стабильный) |
@@ -144,6 +151,8 @@ out/
     transcript.srt                  # таймкоды HH:MM:SS,mmm
     transcript.vtt                  # таймкоды HH:MM:SS.mmm
     transcript.json                 # [{start, duration, text}]
+    transcript.jsonl                # строки {video_id, title, start, duration, text} для RAG
+    transcript.csv                  # таблица video_id,title,start,duration,text
     transcript.txt                  # читаемый текст, абзацы
     transcript.md                   # заголовок + статистика + главы + абзацы
 ```
@@ -177,7 +186,7 @@ out/
 kw-yt dQw4w9WgXcQ --out /tmp/kw-live && ls /tmp/kw-live/*/
 ```
 
-Ожидается: exit 0, папка `*_dQw4w9WgXcQ/` с `meta.json`, `report.html` и пятью
+Ожидается: exit 0, папка `*_dQw4w9WgXcQ/` с `meta.json`, `report.html` и семью
 `transcript.*`, в `index.json` — `"failed": 0`. Открой `report.html` в браузере:
 таймкоды кликабельны, поиск подсвечивает совпадения.
 

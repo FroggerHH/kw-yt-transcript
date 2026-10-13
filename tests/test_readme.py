@@ -46,6 +46,8 @@ def test_readme_required_sections():
         "index.json",
         "meta.json",
         "transcript.srt",
+        "transcript.jsonl",
+        "kw-yt-completion",
         "API-ключ",
         "ffmpeg",
         "--jobs",
@@ -57,6 +59,15 @@ def test_readme_required_sections():
         "config.toml",
     ):
         assert section in text, section
+
+
+def test_completion_script_exists_and_covers_cli():
+    comp = Path(__file__).parent.parent / "contrib" / "kw-yt-completion.bash"
+    assert comp.is_file()
+    text = comp.read_text(encoding="utf-8")
+    assert "complete -F _kw_yt kw-yt" in text
+    for token in ("search", "serve", "--jobs", "--resume", "--format", "jsonl", "csv"):
+        assert token in text, token
 
 
 def test_version_is_0_2_0(capsys):

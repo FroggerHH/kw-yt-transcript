@@ -47,8 +47,10 @@ def test_write_video_all_files(tmp_path):
     paths = write_video(tmp_path, meta(), segments(), "manual")
     video_dir = Path(paths["dir"])
     assert video_dir.name == "testovoe-video-pro-transkripty_dQw4w9WgXcQ"
-    assert set(paths) == {"dir", "meta", "srt", "vtt", "json", "txt", "md", "report"}
-    for key in ("meta", "srt", "vtt", "json", "txt", "md", "report"):
+    assert set(paths) == {
+        "dir", "meta", "srt", "vtt", "json", "txt", "md", "jsonl", "csv", "report",
+    }
+    for key in ("meta", "srt", "vtt", "json", "txt", "md", "jsonl", "csv", "report"):
         assert Path(paths[key]).is_file(), key
     record = json.loads(Path(paths["meta"]).read_text(encoding="utf-8"))
     assert record["title"] == "Тестовое видео про транскрипты"  # ensure_ascii=False
