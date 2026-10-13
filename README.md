@@ -91,6 +91,17 @@ pip install -e .       # pip, editable для разработки
 pipx install ".[asr]"
 # или: pip install -e ".[asr]"
 ```
+
+## Обновление
+
+```bash
+pipx upgrade kw-yt-transcript            # было pipx install .
+uv tool upgrade kw-yt-transcript        # было uv tool install .
+pip install -U .                        # было pip install . (из каталога репо)
+```
+
+Проверка после обновления — та же: `kw-yt --version` покажет новую версию
+(сверься с CHANGELOG.md).
 ```
 
 > Если на Python 3.14 faster-whisper падает с `TypeError: ... metadata_errors ...`

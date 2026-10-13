@@ -51,6 +51,17 @@ pipx install ".[asr]"
 # or: pip install -e ".[asr]"
 ```
 
+## Updating
+
+```bash
+pipx upgrade kw-yt-transcript            # was pipx install .
+uv tool upgrade kw-yt-transcript        # was uv tool install .
+pip install -U .                        # was pip install . (from the repo dir)
+```
+
+Same check after updating: `kw-yt --version` shows the new version
+(compare with CHANGELOG.md).
+
 > If on Python 3.14 faster-whisper crashes with `TypeError: ... metadata_errors ...`
 > (PyAV ≥ 15 is incompatible with faster-whisper 1.2.1) — nothing to do:
 > `kw-yt` decodes audio with system `ffmpeg` itself and passes ready samples

@@ -222,8 +222,42 @@ HELP_CAPTURES = {
 }
 
 
+def _norm_help(text: str) -> list[str]:
+    """Канонизация --help для сравнения поперёк версий Python и ширин.
+
+    1. Сравнение идёт по токенам: переносы/выравнивание по ширине игнорируются.
+    2. Python 3.13+ дублирует metavar у парных флагов
+       (``--out ПАПКА, -o ПАПКА``), старше — показывает один раз
+       (``--out, -o ПАПКА``): схлопываем к старой форме.
+    """
+
+    toks = text.split()
+    out: list[str] = []
+    i = 0
+    while i < len(toks):
+        if (
+            i + 3 < len(toks)
+            and toks[i].startswith("--")
+            and not toks[i].endswith(",")
+            and toks[i + 1].endswith(",")
+            and toks[i + 2].startswith("-")
+            and toks[i + 3] == toks[i + 1][:-1]
+        ):
+            out += [toks[i] + ",", toks[i + 2], toks[i + 3]]
+            i += 4
+        else:
+            out.append(toks[i])
+            i += 1
+    return out
+
+
 def test_demo_help_captures_match_tool(monkeypatch, capsys):
-    """docs/demo/*.txt — вывод реального инструмента (COLUMNS зафиксированы)."""
+    """docs/demo/*.txt — вывод реального инструмента.
+
+    Ширина зафиксирована (COLUMNS=80); сравнение — _norm_help (токены +
+    схлопывание дублированной metavar argparse 3.13+), поэтому тест держится
+    на Python 3.11–3.14 при любом терминале.
+    """
     assert DEMO.is_dir()
     monkeypatch.setenv("COLUMNS", "80")
     for name, argv in HELP_CAPTURES.items():
@@ -232,7 +266,20 @@ def test_demo_help_captures_match_tool(monkeypatch, capsys):
         with pytest.raises(SystemExit) as e:
             cli_mod.main(argv)
         assert e.value.code == 0, name
-        assert f.read_text(encoding="utf-8") == capsys.readouterr().out, name
+        live = capsys.readouterr().out
+        want = f.read_text(encoding="utf-8")
+        norm_want, norm_live = _norm_help(want), _norm_help(live)
+        diff_at = next(
+            (i for i, pair in enumerate(zip(norm_want, norm_live)) if pair[0] != pair[1]),
+            min(len(norm_want), len(norm_live)),
+        )
+        ctx_w = " ".join(norm_want[max(0, diff_at - 5) : diff_at + 5])
+        ctx_l = " ".join(norm_live[max(0, diff_at - 5) : diff_at + 5])
+        assert norm_want == norm_live, (
+            f"{name}: токены расходятся с #{diff_at} "
+            f"(всего {len(norm_want)} vs {len(norm_live)}): "
+            f"файл «{ctx_w}» vs live «{ctx_l}»"
+        )
 
 
 def test_demo_corpus_offline_stats_search_export(monkeypatch, tmp_path, capsys):
