@@ -1,5 +1,20 @@
 # CHANGELOG — kw-yt-transcript
 
+## 0.2.0 (2026-10-13)
+
+- **Волна 1 — HTML + статистика:** `stats.py` (слова, время чтения, wpm,
+  топ ключевых слов ru/en), `report.py` (`report.html` на видео: главы,
+  кликабельные `?t=`, поиск с подсветкой; `index.html` на batch), `stats`
+  в `meta.json`, статистика в шапке MD, Python только stdlib.
+- **Волна 2 — поиск + serve + скорость:** `kw-yt search` (контекст,
+  ранжирование, exit 0/1), `kw-yt serve` (stdlib HTTP на 127.0.0.1),
+  `--jobs 1–16` (порядок index стабильный), `--resume`, кэш метаданных
+  (XDG, TTL 24ч), конфиг `~/.config/kw-yt/config.toml`.
+- **Волна 3a — hardening по review:** тихий отсутствующий конфиг, сильный
+  resume-комплект, search за O(n log n), `as_completed`-прогресс, общий
+  `timefmt.py`, whisper-семафор (2), версии Python 3.11+ везде.
+- Тестов 159 (было 100), ruff `E/F/W/I/UP` чисто.
+
 ## 0.1.0 (2026-10-13)
 
 - **Фаза 1 — скелет + CLI:** `pyproject.toml` (`kw-yt-transcript 0.1.0`, `yt-dlp`,

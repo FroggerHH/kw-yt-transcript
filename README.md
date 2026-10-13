@@ -9,11 +9,16 @@
 - плейлист целиком (развёртка + сводный `index.json`);
 - субтитры YouTube (ручные → авто, языки по приоритету `ru,en`);
 - Whisper-fallback, если субтитров нет (опциональный extra `asr`);
-- 5 форматов на видео: `srt`, `vtt`, `json`, `txt`, `md` — таймкоды + читаемый текст с абзацами.
+- 5 форматов на видео: `srt`, `vtt`, `json`, `txt`, `md` — таймкоды + читаемый текст с абзацами;
+- `report.html` на видео (метаданные, статистика, главы-ссылки, кликабельные таймкоды, поиск с подсветкой) и `index.html` на весь корпус — открываются в браузере без сервера;
+- статистика текста: слова, время чтения, темп речи, ключевые слова;
+- `kw-yt search` — поиск по сохранённым транскриптам с контекстом;
+- `kw-yt serve` — просмотр корпуса в браузере (встроенный HTTP-сервер);
+- быстрый batch: `--jobs N` параллельно, `--resume` пропускает готовое, кэш метаданных, конфиг-файл.
 
 ## Требования
 
-- Python ≥ 3.10.
+- Python ≥ 3.11 (конфиг читается через stdlib `tomllib`).
 - Сеть (YouTube должен быть доступен).
 - `ffmpeg` — **только** для Whisper-fallback (скачивание аудио через yt-dlp). Субтитрам ffmpeg не нужен.
 - API-ключ YouTube **не нужен** (см. `DECISIONS.md`, D5).
@@ -68,6 +73,16 @@ kw-yt dQw4w9WgXcQ --no-fallback-whisper
 
 # Другая модель Whisper (по умолчанию small)
 kw-yt dQw4w9WgXcQ --whisper-model medium
+
+# Быстрый batch: 8 параллельных загрузок, пропуск готового
+kw-yt --from-file links.txt --jobs 8 --resume
+
+# Поиск по сохранённым транскриптам
+kw-yt search "ключевое слово" --in ./out
+kw-yt search never --in ./out --context 30 --limit 5
+
+# Просмотр корпуса в браузере (http://127.0.0.1:8000)
+kw-yt serve ./out --port 8000
 ```
 
 Все опции:
@@ -81,25 +96,63 @@ kw-yt dQw4w9WgXcQ --whisper-model medium
 | `--format` | `all` | `srt`/`vtt`/`json`/`txt`/`md`/`all` |
 | `--no-fallback-whisper` | выкл | не распознавать речь, если субтитров нет |
 | `--whisper-model МОДЕЛЬ` | `small` | модель faster-whisper |
+| `--jobs, -j N` | `4` | параллельных загрузок (1–16, порядок в `index.json` стабильный) |
+| `--resume` | выкл | пропускать видео, чья папка уже готова (сеть не вызывается; оглавление плейлиста всё равно читается по сети) |
 | `--version` | — | показать версию |
+
+`kw-yt search ЗАПРОС`:
+
+| Опция | По умолчанию | Что делает |
+|---|---|---|
+| `--in ПАПКА` | `./out` | корень корпуса |
+| `--context СЕК` | `15` | соседние реплики в ±секундах (`>` — прямое совпадение, пробел — контекст) |
+| `--limit N` | `20` | максимум видео в выдаче |
+
+Выход: группы по видео с числом прямых совпадений, exit 0 (нашёл) / 1 (нет).
+
+`kw-yt serve [ПАПКА] [--port N]` (по умолчанию `./out`, порт `8000`, `0` — авто):
+раздаёт готовый корпус (`index.html`/`report.html`) на `127.0.0.1`, выход — Ctrl+C.
+Без `index.html` в папке — предупреждение, служит дальше (лиcтинг каталога).
+
+## Конфиг и кэш
+
+Конфиг `~/.config/kw-yt/config.toml` (или `$XDG_CONFIG_HOME/kw-yt/config.toml`):
+
+```toml
+[tool.defaults]
+langs = "ru,en"
+out = "./out"
+jobs = 4
+whisper_model = "small"
+```
+
+Приоритет: флаги CLI → конфиг → встроенные дефолты. Отсутствующий файл —
+тихо используются дефолты; битый файл — русское предупреждение в stderr (работа продолжается).
+
+Кэш метаданных: `$XDG_CACHE_HOME/kw-yt` (или `~/.cache/kw-yt`), TTL 24 часа.
+Устаревшие просмотры/лайки до суток — by design. Ошибки кэша молча ведут в сеть.
 
 ## Выходная структура
 
 ```
 out/
-  index.json                        # сводка batch: {_type, entries, failed}
+  index.json                        # сводка batch: {_type, playlist_url, entries, failed}
+  index.html                        # тот же список таблицей + сводка корпуса
   testovoe-video_dQw4w9WgXcQ/       # <slug>_<video_id>/
-    meta.json                       # метаданные + origin
+    meta.json                       # метаданные + origin + stats
+    report.html                     # отчёт: статистика, главы, кликабельные таймкоды, поиск
     transcript.srt                  # таймкоды HH:MM:SS,mmm
     transcript.vtt                  # таймкоды HH:MM:SS.mmm
     transcript.json                 # [{start, duration, text}]
     transcript.txt                  # читаемый текст, абзацы
-    transcript.md                   # заголовок + главы + абзацы
+    transcript.md                   # заголовок + статистика + главы + абзацы
 ```
 
 `meta.json`: `video_id`, `url`, `title`, `channel`/`author`/`channel_id`, `duration`,
 `upload_date`, `view_count`, `like_count`, `description`, `chapters`, `thumbnails`,
-`tags`, `categories`, `subtitles_keys`, `automatic_captions_keys`, `origin`.
+`tags`, `categories`, `subtitles_keys`, `automatic_captions_keys`, `origin`,
+`transcript_lang`, `fetched_at`, `tool_version`, `asr_model` (только при `origin: whisper`),
+`stats` (`words`, `chars`, `reading_time_min`, `speaking_wpm`, `top_keywords`).
 
 `origin` — источник текста: `manual` (ручные субтитры), `auto` (автосубтитры),
 `whisper` (распознавание речи).
@@ -124,8 +177,16 @@ out/
 kw-yt dQw4w9WgXcQ --out /tmp/kw-live && ls /tmp/kw-live/*/
 ```
 
-Ожидается: exit 0, папка `*_dQw4w9WgXcQ/` с `meta.json` и пятью `transcript.*`,
-в `index.json` — `"failed": 0`.
+Ожидается: exit 0, папка `*_dQw4w9WgXcQ/` с `meta.json`, `report.html` и пятью
+`transcript.*`, в `index.json` — `"failed": 0`. Открой `report.html` в браузере:
+таймкоды кликабельны, поиск подсвечивает совпадения.
+
+Дальше на этом корпусе:
+
+```bash
+kw-yt search never --in /tmp/kw-live --limit 3   # exit 0, группы с 00:43 Never gonna...
+kw-yt serve /tmp/kw-live --port 8000            # http://127.0.0.1:8000, выход Ctrl+C
+```
 
 ## Разработка
 

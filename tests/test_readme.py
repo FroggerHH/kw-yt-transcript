@@ -48,14 +48,32 @@ def test_readme_required_sections():
         "transcript.srt",
         "API-ключ",
         "ffmpeg",
+        "--jobs",
+        "--resume",
+        "kw-yt search",
+        "kw-yt serve",
+        "report.html",
+        "index.html",
+        "config.toml",
     ):
         assert section in text, section
 
 
+def test_version_is_0_2_0(capsys):
+    with pytest.raises(SystemExit) as e:
+        cli_mod.main(["--version"])
+    assert e.value.code == 0
+    assert "0.2.0" in capsys.readouterr().out
+
+
+def _all_option_strings():
+    parsers = (cli_mod.build_parser(), cli_mod.build_search_parser(), cli_mod.build_serve_parser())
+    return {opt for p in parsers for action in p._actions for opt in action.option_strings}
+
+
 def test_readme_flags_exist_in_parser():
     """Каждый --флаг из kw-yt-примеров README обязан существовать в argparse."""
-    parser = cli_mod.build_parser()
-    known = {opt for action in parser._actions for opt in action.option_strings}
+    known = _all_option_strings()
     flags = set()
     for line in readme_text().splitlines():
         if "kw-yt" in line:

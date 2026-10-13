@@ -6,7 +6,8 @@
 - [x] Волна 2 (fix-2): search.py + serve.py + cli (subcommands, --jobs, --resume, кэш TTL, конфиг). Gates: 147 passed, serve 200 (тест), --resume без сети (тест), live search 57 хитов exit 0.
 - [x] Review v0.2 (ora-2): fix-list, 11 пунктов (3 medium: конфиг-шум, resume-критерий, search O(n)), блокеров нет. Потоки/кэш/serve проверены ok.
 - [x] Волна 3a (fix-2 + оркестратор): правки №1–10 + версии 3.11+ везде. Gates: 159 passed, ruff clean, --help exit 0.
-- [ ] Волна 3b (fixer, background): README v0.2 + версия 0.2.0 + CHANGELOG + live acceptance п.11 (report.html, search, serve 200).
+- [x] Волна 3b (оркестратор, fixer rate limit): README v0.2 + 0.2.0 + CHANGELOG + test_readme. Gates: 160 passed, ruff clean. Live п.11: exit 0, 7 файлов, report.html 33 ссылки, search 38, serve 200.
+- [ ] Волна 4 (оркестратор сам): экспорт jsonl/csv + bash-completion + тесты. Затем финальный review, 0.2.0-коммит(ы), done.
 - Next: волна 4 (jsonl/csv, completion, thumbnails) если время до 17:31 осталось.
 
 ---
