@@ -93,3 +93,12 @@ tests/           — stubs yt-dlp/transcript/whisper, без сети (M5: XDG t
 - **Whisper-семафор (№10):** `threading.Semaphore(2)` вокруг whisper-ветки
   `_process_video`, остальной batch параллелен.
 - **№11:** keep-as-is, без действий.
+
+## v0.2 Волна 5 (сводный экспорт, аддитивно, оркестратор напрямую)
+- `export.py`: `collect_corpus` (детерминированный порядок по имени папки,
+  папки без/битых `transcript.json` → `skipped` с ошибкой) + `export_corpus`
+  (jsonl — конкат `formats.to_jsonl` по видео, csv — одна шапка + строки;
+  атомарная запись `*.tmp` + `os.replace`) + `write_summary` (счётчики,
+  `by_origin`, `videos`, `skipped`).
+- CLI `export`: `--in/--format/--out/--summary/--no-summary`; пустой корпус →
+  exit 1, нет папки → exit 2; итоговая строка в stdout (как search).

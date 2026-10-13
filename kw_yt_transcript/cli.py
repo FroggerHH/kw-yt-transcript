@@ -20,6 +20,7 @@ from typing import Any
 
 from kw_yt_transcript import __version__, asr, metadata, outputs, transcript
 from kw_yt_transcript import config as config_mod
+from kw_yt_transcript import export as export_mod
 from kw_yt_transcript import search as search_mod
 from kw_yt_transcript import serve as serve_mod
 from kw_yt_transcript.inputs import parse_inputs_with_errors
@@ -189,6 +190,44 @@ def build_serve_parser() -> argparse.ArgumentParser:
     return p
 
 
+def build_export_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(
+        prog="kw-yt export",
+        description="Сводный экспорт корпуса в один файл (для RAG и анализа).",
+    )
+    p.add_argument(
+        "--in",
+        dest="in_dir",
+        metavar="ПАПКА",
+        default=None,
+        help="Корень корпуса (по умолчанию ./out или из конфига).",
+    )
+    p.add_argument(
+        "--format",
+        choices=["jsonl", "csv"],
+        default="jsonl",
+        help="Формат сводного файла (по умолчанию jsonl).",
+    )
+    p.add_argument(
+        "--out",
+        metavar="ФАЙЛ",
+        default=None,
+        help="Куда писать корпус (по умолчанию <корень>/corpus.{jsonl|csv}).",
+    )
+    p.add_argument(
+        "--summary",
+        metavar="ФАЙЛ",
+        default=None,
+        help="Куда писать summary.json (по умолчанию <корень>/summary.json).",
+    )
+    p.add_argument(
+        "--no-summary",
+        action="store_true",
+        help="Не писать summary.json.",
+    )
+    return p
+
+
 def expand_playlist(url: str, ydl_factory=None) -> list[dict[str, Any]]:
     """Flat-развёртка плейлиста -> [{url|None, error|None}].
 
@@ -310,15 +349,17 @@ def _load_ready_record(video_dir: Path) -> dict[str, Any]:
 def main(argv: list[str] | None = None) -> int:
     """Точка входа. Коды: 0 — всё ок, 1 — частичные ошибки/не найдено, 2 — usage.
 
-    Субкоманды `search`/`serve` — по argv[1], иначе старое fetch-поведение.
+    Субкоманды `search`/`serve`/`export` — по argv[1], иначе старое fetch-поведение.
     Fetch пишет в stderr, stdout пуст; search печатает результаты в stdout;
-    serve печатает URL в stdout.
+    serve печатает URL в stdout; export печатает сводку в stdout.
     """
     argv = sys.argv[1:] if argv is None else list(argv)
     if argv and argv[0] == "search":
         return _main_search(argv)
     if argv and argv[0] == "serve":
         return _main_serve(argv)
+    if argv and argv[0] == "export":
+        return _main_export(argv)
     return _main_fetch(argv)
 
 
@@ -655,6 +696,40 @@ def _main_serve(argv: list[str]) -> int:
         )
         return 2
     return serve_mod.serve_dir(root, port)
+
+
+def _main_export(argv: list[str]) -> int:
+    """Сводный экспорт корпуса: один файл + summary.json, exit 0/1/2."""
+    args = build_export_parser().parse_args(argv[1:])
+    cfg = config_mod.load_config()
+    root = args.in_dir or cfg.get("out", "./out")
+    if not Path(root).is_dir():
+        print(f"Ошибка: папка корпуса не найдена: {root}.", file=sys.stderr, flush=True)
+        return 2
+    out_path = Path(args.out) if args.out else Path(root) / f"corpus.{args.format}"
+    try:
+        summary = export_mod.export_corpus(root, out_path, args.format)
+    except ValueError as e:
+        print(f"Ошибка: {e}", file=sys.stderr, flush=True)
+        return 1
+    except OSError as e:
+        print(f"Ошибка: не пишется файл {out_path}: {e}", file=sys.stderr, flush=True)
+        return 1
+    if not args.no_summary:
+        summary_path = Path(args.summary) if args.summary else Path(root) / "summary.json"
+        try:
+            export_mod.write_summary(summary, summary_path)
+        except OSError as e:
+            print(f"Ошибка: не пишется файл {summary_path}: {e}", file=sys.stderr, flush=True)
+            return 1
+        summary_note = f", сводка {summary_path}"
+    else:
+        summary_note = ""
+    print(
+        f"Экспорт: видео {summary['n_videos']}, реплик {summary['n_segments']}, "
+        f"слов {summary['total_words']} → {out_path}{summary_note}."
+    )
+    return 0
 
 
 if __name__ == "__main__":

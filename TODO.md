@@ -23,6 +23,9 @@
 - [x] test_readme: 3 парсера, новые маркеры, тест версии; Gates: pytest 160, ruff clean, --help/search --help exit 0
 - [x] Live acceptance п.11: single → exit 0, 7 файлов, report.html 33 таймкод-ссылки; search 38 хитов; serve 200 (1237 bytes)
 
+## Волна 5: Сводный экспорт [x] (done 16:21, 169 passed, оркестратор напрямую)
+- [x] export.py + tests/test_export.py (6); cli export; README + test_readme; Gates + live (61 реплика/487 слов)
+
 ## Волна 4: Экспорт + completion [x] (done 16:18, 163 passed, оркестратор напрямую)
 - [x] formats jsonl/csv (+реестр FORMATS, filenames, --format choices), тесты round-trip/quoting/empty/header
 - [x] contrib/kw-yt-completion.bash + README + тест покрытия; README «7 форматов», live «семью»

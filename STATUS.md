@@ -8,7 +8,10 @@
 - [x] Волна 3a (fix-2 + оркестратор): правки №1–10 + версии 3.11+ везде. Gates: 159 passed, ruff clean, --help exit 0.
 - [x] Волна 3b (оркестратор, fixer rate limit): README v0.2 + 0.2.0 + CHANGELOG + test_readme. Gates: 160 passed, ruff clean. Live п.11: exit 0, 7 файлов, report.html 33 ссылки, search 38, serve 200.
 - [x] Волна 4 (оркестратор): jsonl/csv + completion + README + тесты. Gates: 163 passed, ruff clean, live 9 файлов exit 0.
-- [ ] Волна 5 (оркестратор): `kw-yt export` — сводный корпус (merged jsonl/csv + summary.json). Затем финальный review + done v0.2.
+## Волна 5: Сводный экспорт [x] (done 16:21, 169 passed, оркестратор напрямую)
+- [x] export.py (collect/export_corpus/write_summary, jsonl+csv, skipped, атомарно) + tests/test_export.py (6)
+- [x] cli export (--in/--format/--out/--summary/--no-summary, exit 0/1/2) + README + test_readme (парсер в union, маркеры)
+- [x] Gates: pytest 169, ruff clean, export --help exit 0; live: 1 видео/61 реплика/487 слов, summary ok
 - Next: волна 4 (jsonl/csv, completion, thumbnails) если время до 17:31 осталось.
 
 ---

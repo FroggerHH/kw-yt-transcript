@@ -54,6 +54,8 @@ def test_readme_required_sections():
         "--resume",
         "kw-yt search",
         "kw-yt serve",
+        "kw-yt export",
+        "corpus.jsonl",
         "report.html",
         "index.html",
         "config.toml",
@@ -78,7 +80,12 @@ def test_version_is_0_2_0(capsys):
 
 
 def _all_option_strings():
-    parsers = (cli_mod.build_parser(), cli_mod.build_search_parser(), cli_mod.build_serve_parser())
+    parsers = (
+        cli_mod.build_parser(),
+        cli_mod.build_search_parser(),
+        cli_mod.build_serve_parser(),
+        cli_mod.build_export_parser(),
+    )
     return {opt for p in parsers for action in p._actions for opt in action.option_strings}
 
 

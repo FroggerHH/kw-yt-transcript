@@ -90,6 +90,10 @@ kw-yt search never --in ./out --context 30 --limit 5
 
 # Просмотр корпуса в браузере (http://127.0.0.1:8000)
 kw-yt serve ./out --port 8000
+
+# Сводный экспорт корпуса для RAG/анализа (corpus.jsonl + summary.json)
+kw-yt export --in ./out
+kw-yt export --in ./out --format csv --out ./all.csv --no-summary
 ```
 
 Все опции:
@@ -120,6 +124,19 @@ kw-yt serve ./out --port 8000
 `kw-yt serve [ПАПКА] [--port N]` (по умолчанию `./out`, порт `8000`, `0` — авто):
 раздаёт готовый корпус (`index.html`/`report.html`) на `127.0.0.1`, выход — Ctrl+C.
 Без `index.html` в папке — предупреждение, служит дальше (лиcтинг каталога).
+
+`kw-yt export` — склейка всех `*/transcript.json` корпуса в один файл:
+
+| Опция | По умолчанию | Что делает |
+|---|---|---|
+| `--in ПАПКА` | `./out` | корень корпуса |
+| `--format` | `jsonl` | `jsonl` (строки для RAG) или `csv` (таблица) |
+| `--out ФАЙЛ` | `<корень>/corpus.{jsonl\|csv}` | куда писать корпус |
+| `--summary ФАЙЛ` | `<корень>/summary.json` | куда писать сводку (счётчики, `by_origin`, пропуски) |
+| `--no-summary` | выкл | не писать сводку |
+
+Папки без `transcript.json` или с битым JSON — в `summary.skipped`, экспорт не падает.
+Выход: строка сводки в stdout, exit 0; пустой корпус — ошибка, exit 1.
 
 ## Конфиг и кэш
 
