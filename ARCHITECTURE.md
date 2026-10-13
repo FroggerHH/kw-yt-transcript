@@ -102,3 +102,6 @@ tests/           — stubs yt-dlp/transcript/whisper, без сети (M5: XDG t
   `by_origin`, `videos`, `skipped`).
 - CLI `export`: `--in/--format/--out/--summary/--no-summary`; пустой корпус →
   exit 1, нет папки → exit 2; итоговая строка в stdout (как search).
+- **Limitation (честно):** `export_corpus` держит сегменты всех видео + склейку
+  в памяти (×2–3 от корпуса). До ~100 видео (~5–15 МБ) незаметно; для 1000+
+  (~100 МБ) — стримить построчно в `*.tmp` (пока не сделано, см. Future).

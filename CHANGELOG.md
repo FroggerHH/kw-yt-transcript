@@ -14,6 +14,10 @@
   resume-комплект, search за O(n log n), `as_completed`-прогресс, общий
   `timefmt.py`, whisper-семафор (2), версии Python 3.11+ везде.
 - Тестов 159 (было 100), ruff `E/F/W/I/UP` чисто.
+- **Волна 4 — экспорт форматов + completion:** `jsonl` (строки для RAG)
+  и `csv` (таблица) в `--format`/`FORMATS`, `contrib/kw-yt-completion.bash`.
+- **Волна 5 — сводный экспорт:** `kw-yt export` (один `corpus.jsonl/csv` +
+  `summary.json` со счётчиками, `by_origin` и `skipped`).
 
 ## 0.1.0 (2026-10-13)
 

@@ -26,6 +26,9 @@
 ## Волна 5: Сводный экспорт [x] (done 16:21, 169 passed, оркестратор напрямую)
 - [x] export.py + tests/test_export.py (6); cli export; README + test_readme; Gates + live (61 реплика/487 слов)
 
+## Финал review волн 4–5 [x] (done 16:25, 170 passed, оркестратор напрямую)
+- [x] ora-3 fix-list: CHANGELOG волны 4–5; completion ветка export; README exit-коды; валидация сегментов → skipped; atomic-хелпер; ARCH memory-limitation; cli docstring/EXAMPLES; SPEC пп.12–13 + acceptance; тест битых сегментов
+
 ## Волна 4: Экспорт + completion [x] (done 16:18, 163 passed, оркестратор напрямую)
 - [x] formats jsonl/csv (+реестр FORMATS, filenames, --format choices), тесты round-trip/quoting/empty/header
 - [x] contrib/kw-yt-completion.bash + README + тест покрытия; README «7 форматов», live «семью»

@@ -68,7 +68,10 @@ def test_completion_script_exists_and_covers_cli():
     assert comp.is_file()
     text = comp.read_text(encoding="utf-8")
     assert "complete -F _kw_yt kw-yt" in text
-    for token in ("search", "serve", "--jobs", "--resume", "--format", "jsonl", "csv"):
+    for token in (
+        "search", "serve", "export", "--jobs", "--resume", "--format",
+        "jsonl", "csv", "--no-summary",
+    ):
         assert token in text, token
 
 

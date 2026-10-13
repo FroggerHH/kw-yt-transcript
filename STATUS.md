@@ -12,7 +12,8 @@
 - [x] export.py (collect/export_corpus/write_summary, jsonl+csv, skipped, атомарно) + tests/test_export.py (6)
 - [x] cli export (--in/--format/--out/--summary/--no-summary, exit 0/1/2) + README + test_readme (парсер в union, маркеры)
 - [x] Gates: pytest 169, ruff clean, export --help exit 0; live: 1 видео/61 реплика/487 слов, summary ok
-- Next: волна 4 (jsonl/csv, completion, thumbnails) если время до 17:31 осталось.
+- [x] Финал review волн 4–5 (ora-3): fix-list без блокеров отработан (CHANGELOG, completion-export, exit-коды, валидация сегментов, atomic, ARCH-limitation, docstring/EXAMPLES, SPEC 12–13 + acceptance). Gates: 170 passed, ruff clean.
+- [ ] Волна 6 (оркестратор): `kw-yt stats` — сводная статистика корпуса. Затем коммит, live smoke, done v0.2.
 
 ---
 

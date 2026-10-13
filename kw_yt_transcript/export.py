@@ -15,11 +15,22 @@ from pathlib import Path
 from typing import Any
 
 from kw_yt_transcript import __version__
+from kw_yt_transcript import outputs as outputs_mod
 from kw_yt_transcript.formats import to_jsonl
 from kw_yt_transcript.stats import compute_stats
 
 #: Форматы сводного экспорта.
 EXPORT_FORMATS = ("jsonl", "csv")
+
+
+def _is_segment(item: Any) -> bool:
+    """Сегмент пригоден: dict с числовыми start/duration и строкой text."""
+    return (
+        isinstance(item, dict)
+        and isinstance(item.get("start"), (int, float))
+        and isinstance(item.get("duration"), (int, float))
+        and isinstance(item.get("text"), str)
+    )
 
 
 def collect_corpus(root: str | Path) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
@@ -45,6 +56,12 @@ def collect_corpus(root: str | Path) -> tuple[list[dict[str, Any]], list[dict[st
             continue
         if not isinstance(segments, list):
             skipped.append({"dir": child.name, "error": "transcript.json — не список"})
+            continue
+        bad = [i for i, s in enumerate(segments) if not _is_segment(s)]
+        if bad:
+            skipped.append(
+                {"dir": child.name, "error": f"битые сегменты (индексы: {bad[:5]}...)"}
+            )
             continue
         meta: dict[str, Any] = {}
         mpath = child / "meta.json"
@@ -95,9 +112,7 @@ def export_corpus(root: str | Path, out_path: str | Path, fmt: str = "jsonl") ->
             for s in v["segments"]:
                 writer.writerow([v["video_id"], v["title"], s["start"], s["duration"], s["text"]])
         content = buf.getvalue()
-    tmp = out.with_name(out.name + ".tmp")
-    tmp.write_text(content, encoding="utf-8")
-    tmp.replace(out)
+    outputs_mod._atomic_write_text(out, content)
     n_segments = sum(len(v["segments"]) for v in videos)
     total_words = 0
     by_origin: dict[str, int] = {}
@@ -138,7 +153,5 @@ def export_corpus(root: str | Path, out_path: str | Path, fmt: str = "jsonl") ->
 def write_summary(summary: dict[str, Any], path: str | Path) -> Path:
     """Записать summary.json атомарно. Возвращает путь."""
     out = Path(path)
-    tmp = out.with_name(out.name + ".tmp")
-    tmp.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
-    tmp.replace(out)
+    outputs_mod._atomic_write_text(out, json.dumps(summary, ensure_ascii=False, indent=2))
     return out

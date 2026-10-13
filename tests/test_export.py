@@ -90,6 +90,24 @@ def test_export_bad_format_and_empty_corpus(tmp_path):
         raise AssertionError("ожидался ValueError")
 
 
+def test_invalid_segments_go_to_skipped_without_traceback(tmp_path, capsys):
+    root = tmp_path / "out"
+    root.mkdir()
+    bad = root / "e_badsegs"
+    bad.mkdir()
+    (bad / "transcript.json").write_text(
+        json.dumps(["foo", {"text": "без старта", "duration": 1.0}], ensure_ascii=False),
+        encoding="utf-8",
+    )
+    (bad / "meta.json").write_text(
+        json.dumps({"video_id": "id9", "title": "Битое"}, ensure_ascii=False), encoding="utf-8"
+    )
+    assert cli_mod.main(["export", "--in", str(root)]) == 1
+    err = capsys.readouterr().err
+    assert "Traceback" not in err
+    assert "нечего" in err.lower() or "Нечего" in err
+
+
 def test_cli_export_writes_files_and_summary(tmp_path):
     root = _corpus(tmp_path / "out")
     assert cli_mod.main(["export", "--in", str(root)]) == 0

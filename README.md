@@ -136,7 +136,7 @@ kw-yt export --in ./out --format csv --out ./all.csv --no-summary
 | `--no-summary` | выкл | не писать сводку |
 
 Папки без `transcript.json` или с битым JSON — в `summary.skipped`, экспорт не падает.
-Выход: строка сводки в stdout, exit 0; пустой корпус — ошибка, exit 1.
+Выход: строка сводки в stdout, exit 0; пустой корпус — ошибка, exit 1; нет папки — exit 2.
 
 ## Конфиг и кэш
 

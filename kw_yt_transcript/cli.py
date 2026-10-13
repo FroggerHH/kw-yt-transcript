@@ -2,7 +2,8 @@
 
 Полный цикл: parse_inputs → get_metadata → get_transcript
 (или Whisper-fallback) → write_video + index.json.
-Субкоманды: `search` (поиск по корпусу), `serve` (просмотр корпуса).
+Субкоманды: `search` (поиск по корпусу), `serve` (просмотр корпуса),
+`export` (сводный файл корпуса + summary.json).
 Иначе — старое fetch-поведение. Импорты yt-dlp/transcript/whisper — лениво,
 поэтому --help работает без сети и опциональных зависимостей.
 """
@@ -64,6 +65,9 @@ EXAMPLES = """Примеры:
 
    kw-yt serve ./out --port 8000
        Просмотр корпуса в браузере.
+
+   kw-yt export --in ./out
+       Сводный корпус (corpus.jsonl + summary.json) для RAG и анализа.
 """
 
 

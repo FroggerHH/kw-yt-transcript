@@ -23,12 +23,16 @@ _kw_yt() {
             COMPREPLY=( $(compgen -W "--in --context --limit" -- "$cur") )
             return 0
             ;;
+        export)
+            COMPREPLY=( $(compgen -W "--in --format --out --summary --no-summary" -- "$cur") )
+            return 0
+            ;;
         serve)
             COMPREPLY=( $(compgen -W "--port" -- "$cur") )
             return 0
             ;;
         "")
-            COMPREPLY=( $(compgen -W "search serve --from-file --out --langs --format --no-fallback-whisper --whisper-model --jobs --resume --version" -- "$cur") )
+            COMPREPLY=( $(compgen -W "search serve export --from-file --out --langs --format --no-fallback-whisper --whisper-model --jobs --resume --version" -- "$cur") )
             return 0
             ;;
     esac
