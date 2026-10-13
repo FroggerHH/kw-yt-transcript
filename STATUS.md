@@ -37,7 +37,8 @@ Floor: 3h (интервью v0.1) + продолжение по идеям/по�
 - [x] CI-фикс (fix-4): argparse metavar 3.13+ vs 3.12 → нормализация токенов, проверено 3.12/3.14 × COLUMNS. Update-гайд RU+EN. Commit 40b51f0 запушен, ран 38420700784.
 - [x] CI green: ран 38420700784 success (18:17 MSK) — красные раны закрыты.
 - [x] Done: коммит ниже, дерево чистое, всё запушено. Финальный отчёт — следующим сообщением.
-- Wiki-remote: not found 17:10 (>25 мин) → user-step (создать первую страницу в web-wiki).
+- [x] Волна 11 (wiki DONE 18:29): remote появился после стартовой страницы пользователя; 7 полных страниц запушены (7895fe1).
+- [x] Done: всё запушено (main + wiki); финальный отчёт — следующим сообщением.
 - [x] Волна 26 (fix-4): kw-yt update (автодетект 5 видов, --check, reinstall из GitHub). Gates: 276 passed, ruff/format/mypy чисто, live --check свежее. Commit 35cd280 запушен.
 - [x] Done: дерево чистое, всё запушено; wiki — единственный user-step.
 - [x] Done v0.2 (16:34 MSK, до дедлайна 17:31): коммит ниже, дерево чистое. Live-доказательства: single→9 файлов exit 0, report.html 33 ссылки, search 38–57 хитов, serve 200, export 61/487, stats таблица+JSON, thumbnail.jpg.

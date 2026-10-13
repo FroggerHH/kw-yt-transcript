@@ -96,7 +96,8 @@
 - [x] Live-доказательства: fetch/batch/resume/export/stats/search/serve/Whisper-tiny(75)/thumbnails/gallery
 - [ ] Wiki-remote: not found весь день → user-step (создать первую страницу в web-wiki, контент в docs/wiki/)
 
-## Волна 11: GitHub + wiki [~] (репозиторий PUBLIC + main запушен; wiki — blocked, контент сохранён)
+## Волна 11: GitHub + wiki [x] (done 18:29 — пользователь создал стартовую страницу, remote появился)
+- [x] 7 полных страниц поверх стаба (7895fe1), wiki жива: https://github.com/FroggerHH/kw-yt-transcript/wiki
 - [x] Аудит секретов чист (только упоминание пути); `gh repo edit --visibility public` → PUBLIC
 - [x] `git push -u origin main` — вся история на GitHub (FroggerHH/kw-yt-transcript)
 - [x] 7 wiki-страниц готовы (/tmp/opencode/kw-wiki) + зеркало docs/wiki/ запушено в main (d09f4fa)
