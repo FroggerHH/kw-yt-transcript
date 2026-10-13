@@ -20,7 +20,8 @@
 - [x] M4 полный прогон: pytest 66 passed + --help/--version exit 0; M5 изоляция (XDG temp, stubs, аудит без сети)
 - [x] Oracle-review раунд 1 (ora-1): verdict fix-list, 15 findings, блокеров нет.
 - [x] Findings fix (fix-1): все 15 отработаны (п.13 осознанно без изменений), 72 passed.
-- [ ] Oracle-review раунд 2 (background): подтвердить zero-actionable. Затем exhaustion passes 1–8 + done check C5.
+- [x] Oracle-review раунд 2 (ora-1): nothing actionable.
+- [ ] Oracle-review раунд 3 (подтвердить второй consecutive clean) + exhaustion passes 1–8 + done check C5.
 
 ## Future backlog (не делаем)
 - Перевод транскрипта, YouTube Data API v3, TUI/Web — причины в SPEC non-goals.
