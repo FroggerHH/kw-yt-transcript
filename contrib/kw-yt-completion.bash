@@ -27,12 +27,16 @@ _kw_yt() {
             COMPREPLY=( $(compgen -W "--in --format --out --summary --no-summary" -- "$cur") )
             return 0
             ;;
+        stats)
+            COMPREPLY=( $(compgen -W "--in --json" -- "$cur") )
+            return 0
+            ;;
         serve)
             COMPREPLY=( $(compgen -W "--port" -- "$cur") )
             return 0
             ;;
         "")
-            COMPREPLY=( $(compgen -W "search serve export --from-file --out --langs --format --no-fallback-whisper --whisper-model --jobs --resume --version" -- "$cur") )
+            COMPREPLY=( $(compgen -W "search serve export stats --from-file --out --langs --format --no-fallback-whisper --whisper-model --jobs --resume --version" -- "$cur") )
             return 0
             ;;
     esac

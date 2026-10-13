@@ -55,6 +55,7 @@ def test_readme_required_sections():
         "kw-yt search",
         "kw-yt serve",
         "kw-yt export",
+        "kw-yt stats",
         "corpus.jsonl",
         "report.html",
         "index.html",
@@ -69,8 +70,8 @@ def test_completion_script_exists_and_covers_cli():
     text = comp.read_text(encoding="utf-8")
     assert "complete -F _kw_yt kw-yt" in text
     for token in (
-        "search", "serve", "export", "--jobs", "--resume", "--format",
-        "jsonl", "csv", "--no-summary",
+        "search", "serve", "export", "stats", "--jobs", "--resume", "--format",
+        "jsonl", "csv", "--no-summary", "--json",
     ):
         assert token in text, token
 
@@ -88,6 +89,7 @@ def _all_option_strings():
         cli_mod.build_search_parser(),
         cli_mod.build_serve_parser(),
         cli_mod.build_export_parser(),
+        cli_mod.build_stats_parser(),
     )
     return {opt for p in parsers for action in p._actions for opt in action.option_strings}
 

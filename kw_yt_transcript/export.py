@@ -150,6 +150,55 @@ def export_corpus(root: str | Path, out_path: str | Path, fmt: str = "jsonl") ->
     }
 
 
+def summarize(videos: list[dict[str, Any]], skipped: list[dict[str, Any]]) -> dict[str, Any]:
+    """Сводная статистика корпуса для `kw-yt stats` (без записи файлов)."""
+    total_words = 0
+    total_seconds = 0.0
+    by_origin: dict[str, int] = {}
+    by_lang: dict[str, int] = {}
+    rows = []
+    for v in videos:
+        try:
+            words = int(compute_stats(v["segments"], None).get("words", 0))
+        except Exception:
+            words = 0
+        span = 0.0
+        try:
+            ends = [float(s["start"]) + float(s["duration"]) for s in v["segments"]]
+            span = max(ends) if ends else 0.0
+        except Exception:
+            span = 0.0
+        total_words += words
+        total_seconds += span
+        origin = str(v.get("origin") or "unknown")
+        lang = str(v.get("transcript_lang") or "unknown")
+        by_origin[origin] = by_origin.get(origin, 0) + 1
+        by_lang[lang] = by_lang.get(lang, 0) + 1
+        rows.append(
+            {
+                "video_id": v["video_id"],
+                "title": v["title"],
+                "dir": v["dir"],
+                "segments": len(v["segments"]),
+                "words": words,
+                "seconds": round(span, 1),
+                "origin": v.get("origin"),
+                "transcript_lang": v.get("transcript_lang"),
+            }
+        )
+    return {
+        "tool": f"kw-yt {__version__}",
+        "n_videos": len(videos),
+        "n_segments": sum(len(v["segments"]) for v in videos),
+        "total_words": total_words,
+        "total_minutes": round(total_seconds / 60, 1),
+        "by_origin": by_origin,
+        "by_lang": by_lang,
+        "skipped": len(skipped),
+        "videos": rows,
+    }
+
+
 def write_summary(summary: dict[str, Any], path: str | Path) -> Path:
     """Записать summary.json атомарно. Возвращает путь."""
     out = Path(path)

@@ -3,7 +3,7 @@
 Полный цикл: parse_inputs → get_metadata → get_transcript
 (или Whisper-fallback) → write_video + index.json.
 Субкоманды: `search` (поиск по корпусу), `serve` (просмотр корпуса),
-`export` (сводный файл корпуса + summary.json).
+`export` (сводный файл корпуса + summary.json), `stats` (сводка корпуса).
 Иначе — старое fetch-поведение. Импорты yt-dlp/transcript/whisper — лениво,
 поэтому --help работает без сети и опциональных зависимостей.
 """
@@ -68,6 +68,9 @@ EXAMPLES = """Примеры:
 
    kw-yt export --in ./out
        Сводный корпус (corpus.jsonl + summary.json) для RAG и анализа.
+
+   kw-yt stats --in ./out
+       Сводная статистика корпуса (таблица или --json).
 """
 
 
@@ -232,6 +235,26 @@ def build_export_parser() -> argparse.ArgumentParser:
     return p
 
 
+def build_stats_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(
+        prog="kw-yt stats",
+        description="Сводная статистика корпуса (без скачивания).",
+    )
+    p.add_argument(
+        "--in",
+        dest="in_dir",
+        metavar="ПАПКА",
+        default=None,
+        help="Корень корпуса (по умолчанию ./out или из конфига).",
+    )
+    p.add_argument(
+        "--json",
+        action="store_true",
+        help="Вывести сводку JSON вместо таблицы.",
+    )
+    return p
+
+
 def expand_playlist(url: str, ydl_factory=None) -> list[dict[str, Any]]:
     """Flat-развёртка плейлиста -> [{url|None, error|None}].
 
@@ -353,9 +376,9 @@ def _load_ready_record(video_dir: Path) -> dict[str, Any]:
 def main(argv: list[str] | None = None) -> int:
     """Точка входа. Коды: 0 — всё ок, 1 — частичные ошибки/не найдено, 2 — usage.
 
-    Субкоманды `search`/`serve`/`export` — по argv[1], иначе старое fetch-поведение.
+    Субкоманды `search`/`serve`/`export`/`stats` — по argv[1], иначе старое fetch-поведение.
     Fetch пишет в stderr, stdout пуст; search печатает результаты в stdout;
-    serve печатает URL в stdout; export печатает сводку в stdout.
+    serve печатает URL в stdout; export печатает сводку в stdout; stats — таблицу/JSON.
     """
     argv = sys.argv[1:] if argv is None else list(argv)
     if argv and argv[0] == "search":
@@ -364,6 +387,8 @@ def main(argv: list[str] | None = None) -> int:
         return _main_serve(argv)
     if argv and argv[0] == "export":
         return _main_export(argv)
+    if argv and argv[0] == "stats":
+        return _main_stats(argv)
     return _main_fetch(argv)
 
 
@@ -733,6 +758,40 @@ def _main_export(argv: list[str]) -> int:
         f"Экспорт: видео {summary['n_videos']}, реплик {summary['n_segments']}, "
         f"слов {summary['total_words']} → {out_path}{summary_note}."
     )
+    return 0
+
+
+def _main_stats(argv: list[str]) -> int:
+    """Сводная статистика корпуса в stdout: таблица или JSON, exit 0/1/2."""
+    args = build_stats_parser().parse_args(argv[1:])
+    cfg = config_mod.load_config()
+    root = args.in_dir or cfg.get("out", "./out")
+    if not Path(root).is_dir():
+        print(f"Ошибка: папка корпуса не найдена: {root}.", file=sys.stderr, flush=True)
+        return 2
+    videos, skipped = export_mod.collect_corpus(root)
+    if not videos:
+        print(
+            "Ошибка: в корпусе нет транскриптов (*/transcript.json).",
+            file=sys.stderr,
+            flush=True,
+        )
+        return 1
+    summary = export_mod.summarize(videos, skipped)
+    if args.json:
+        print(json.dumps(summary, ensure_ascii=False, indent=2))
+        return 0
+    print(f"Корпус: {root} — видео {summary['n_videos']}, реплик {summary['n_segments']}, "
+          f"слов {summary['total_words']}, минут {summary['total_minutes']}.")
+    origins = ", ".join(f"{k}: {v}" for k, v in sorted(summary["by_origin"].items()))
+    langs = ", ".join(f"{k}: {v}" for k, v in sorted(summary["by_lang"].items()))
+    print(f"Источники: {origins or '—'}. Языки: {langs or '—'}.")
+    if summary["skipped"]:
+        print(f"Пропущено папок без транскрипта: {summary['skipped']}.")
+    for v in summary["videos"]:
+        title = v.get("title") or v.get("video_id") or "—"
+        print(f"- {title} [{v.get('video_id') or '—'}]: "
+              f"{v['segments']} реплик, {v['words']} слов, {v['seconds']} с.")
     return 0
 
 

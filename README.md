@@ -94,6 +94,10 @@ kw-yt serve ./out --port 8000
 # Сводный экспорт корпуса для RAG/анализа (corpus.jsonl + summary.json)
 kw-yt export --in ./out
 kw-yt export --in ./out --format csv --out ./all.csv --no-summary
+
+# Сводная статистика корпуса (таблица или JSON)
+kw-yt stats --in ./out
+kw-yt stats --in ./out --json
 ```
 
 Все опции:
@@ -137,6 +141,15 @@ kw-yt export --in ./out --format csv --out ./all.csv --no-summary
 
 Папки без `transcript.json` или с битым JSON — в `summary.skipped`, экспорт не падает.
 Выход: строка сводки в stdout, exit 0; пустой корпус — ошибка, exit 1; нет папки — exit 2.
+
+`kw-yt stats` — сводная статистика корпуса без скачивания:
+
+| Опция | По умолчанию | Что делает |
+|---|---|---|
+| `--in ПАПКА` | `./out` | корень корпуса |
+| `--json` | выкл | сводка JSON вместо таблицы (видео, реплики, слова, минуты, `by_origin`/`by_lang`) |
+
+Пустой корпус — ошибка, exit 1; нет папки — exit 2.
 
 ## Конфиг и кэш
 
